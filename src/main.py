@@ -8,6 +8,11 @@ from src.libs.utils import decrypt_password, str2bool
 
 
 def get_arguments():
+    """
+    Return the arguments parsed from command line and config file.
+
+    :return: The parsed arguments.
+    """
     parser = argparse.ArgumentParser(description="Book court for given day and time.")
     parser.add_argument("--day", required=True,
                         choices=["Pon", "Tor", "Sre", "Čet", "Pet", "Sob", "Ned",
@@ -41,6 +46,21 @@ def get_arguments():
 
 
 def main():
+    """
+    Main Method
+
+    This method is the entry point to the program. It performs the following steps:
+    1. Retrieves command line arguments using the `get_arguments()` function.
+    2. Retrieves a mapping of venue names to their corresponding URLs using the `get_venue_to_url_map()` function.
+    3. Retrieves the URL for the specified venue from the mapping.
+    4. Decrypts the password using the `decrypt_password()` function.
+    5. Configures the web driver with the specified options, such as headless mode, using the `configure_driver()` function.
+    6. Logs in to the website using the `login_to_website()` function, providing the driver, venue URL, user email, and decrypted password as arguments.
+    7. Chooses the specified day using the `choose_day()` function, providing the driver and day as arguments.
+    8. Manages the primary and backup bookings using the `manage_primary_and_backup_bookings()` function, providing the driver and command line arguments as arguments.
+
+    :return: None
+    """
     args = get_arguments()
     venue_url_map = get_venue_to_url_map()
     venue_url = venue_url_map[args.venue]
