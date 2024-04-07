@@ -10,7 +10,7 @@ pip install -r requirements.txt
 This command should be run in the project directory where requirements.txt is located.
 # Usage
 The program can be used with a variety of command-line arguments to specify the details of the reservation.
-* `--day`: Specify the target day (e.g., "Mon", "Tue", etc.)
+* `--day`: Specify the target day (e.g., "Pon", "Tor", etc.)
 * `--hour`: Specify the target hour in '%H:%M' format
 * `--num_sessions`: Specify the number of hourly sessions to book
 * `--venue`: Specify the venue of booking (e.g., "tivoli", "svoboda", "koseze")
