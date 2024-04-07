@@ -1,0 +1,4 @@
+python==3.11.8
+cryptography==42.0.5
+selenium==3.141.0
+urllib3==1.26.16
