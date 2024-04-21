@@ -6,6 +6,8 @@ from selenium.common.exceptions import NoSuchElementException, TimeoutException,
 from selenium import webdriver
 from selenium.webdriver import ActionChains
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.service import Service
+from webdriver_manager.chrome import ChromeDriverManager
 
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
@@ -14,7 +16,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from .utils import CaseInsensitiveDict
 
 
-CHROMEDRIVER_PATH = "./chromedriver.exe"
+# CHROMEDRIVER_PATH = "./chromedriver.exe"
 WINDOW_SIZE = "1920,1080"
 USER_AGENT = 'Mozilla/5.0 (Windows NT 4.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/37.0.2049.0 Safari/537.36'
 
@@ -45,7 +47,8 @@ def configure_driver(headless_mode=False):
     chrome_options.add_argument(f'--user-agent={USER_AGENT}')
     chrome_options.add_argument('--no-sandbox')
     chrome_options.add_argument("--disable-extensions")
-    driver = webdriver.Chrome(executable_path=CHROMEDRIVER_PATH, options=chrome_options)
+    chrome_options.add_argument('--disable-dev-shm-usage')
+    driver = webdriver.Chrome(ChromeDriverManager().install(), options=chrome_options)
     return driver
 
 
