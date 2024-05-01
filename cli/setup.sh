@@ -9,8 +9,6 @@ LOCATION="westeurope"
 WORKSPACE="ml-gregor"
 # </set_variables>
 
-
-
 # If RESOURCE_GROUP_NAME is empty, the az configure is pending.
 RESOURCE_GROUP_NAME=${RESOURCE_GROUP_NAME:-}
 if [[ -z "$RESOURCE_GROUP_NAME" ]]
@@ -26,3 +24,7 @@ then
 else
     echo "Workflows are using the new subscription."
 fi
+
+az extension add -n ml -y
+az extension update -n ml
+az extension list
