@@ -16,6 +16,7 @@ jobs:
     command: >-
        python main_test.py 
        --epochs ${{inputs.epochs}}
-    environment: azureml:py-chrome@latest
+    environment: 
+      image: azureml:py-chrome@latest
     inputs:
       raw_data: test
