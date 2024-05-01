@@ -20,7 +20,8 @@ jobs:
         creds: ${{secrets.AZURE_CREDENTIALS}}
     - name: setup
       run: bash setup.sh
-      continue-on-error: true
+      working-directory: cli
+      continue-on-error: false
     - name: create job
       run: |
         run_id=$(az ml job create -f job.yml --query name -o tsv)
