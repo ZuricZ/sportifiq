@@ -1,5 +1,21 @@
-      - name: execute py script # run main.py
-        env:
-          SOME_SECRET: ${{ secrets.SOME_SECRET }}
-        run: python main.py
-          
+$schema: https://azuremlschemas.azureedge.net/latest/pipelineJob.schema.json
+type: pipeline
+experiment_name: tennis-serve
+description: Training Pipeline to run the script
+
+settings:
+  default_datastore: azureml:workspaceblobstore
+  default_compute: azureml:cpu-cluster-tennis
+  continue_on_step_failure: false
+
+jobs:
+  prep_data:
+    name: tennis-script
+    display_name: tennis-script
+    code: src
+    command: >-
+       python main_test.py 
+       --epochs ${{inputs.epochs}}
+    environment: azureml:py-chrome@latest
+    inputs:
+      raw_data: test

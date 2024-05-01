@@ -39,4 +39,3 @@ jobs:
           echo "Job status not failed or completed"
           exit 2
         fi
-      working-directory: cli
