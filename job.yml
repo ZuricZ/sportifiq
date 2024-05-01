@@ -15,7 +15,7 @@ jobs:
   script:
     name: tennis-script
     display_name: tennis-script
-    code: src/
+    code: ../src/
     command: >-
        python main_test.py 
        --epochs ${{inputs.epochs}}
