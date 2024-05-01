@@ -1,12 +1,21 @@
-$schema: https://azuremlschemas.azureedge.net/latest/commandJob.schema.json
-code: src
-command: >-
-  python main_test.py 
-  --epochs ${{inputs.epochs}}
-inputs:
-  epochs: "2"
-environment: azureml:py-chrome@latest
-compute: azureml:cpu-cluster-tennis
-display_name: tennis-reservation-test
-experiment_name: Tennis_reserevation
-description: Run tennis script
+$$schema: https://azuremlschemas.azureedge.net/latest/pipelineJob.schema.json
+type: pipeline
+experiment_name: tennis-serve
+description: Training Pipeline to run the script
+
+settings:
+  default_datastore: azureml:workspaceblobstore
+  default_compute: azureml:cpu-cluster-tennis
+  continue_on_step_failure: false
+
+jobs:
+  prep_data:
+    name: tennis-script
+    display_name: tennis-script
+    code: src
+    command: >-
+       python main_test.py 
+       --epochs ${{inputs.epochs}}
+    environment: environment: azureml:py-chrome@latest
+    inputs:
+      raw_data: "test"
