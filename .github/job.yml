@@ -1,0 +1,12 @@
+$schema: https://azuremlschemas.azureedge.net/latest/commandJob.schema.json
+code: src
+command: >-
+  python main_test.py 
+  --epochs ${{inputs.epochs}}
+inputs:
+  epochs: ${{variable.SERVE}})
+environment: azureml:py-chrome@latest
+compute: azureml:cpu-cluster-tennis
+display_name: tennis-reservation-test
+experiment_name: Tennis_reserevation
+description: Run tennis script
