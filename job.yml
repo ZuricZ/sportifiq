@@ -3,6 +3,9 @@ type: pipeline
 experiment_name: tennis-serve
 description: Training Pipeline to run the script
 
+inputs:
+  epochs: ${{env.SERVE}} 
+
 settings:
   default_datastore: azureml:workspaceblobstore
   default_compute: azureml:cpu-cluster-tennis
@@ -19,4 +22,4 @@ jobs:
     environment: 
       image: azureml:py-chrome@latest
     inputs:
-      epochs: ${{env.SERVE}} 
+      epochs: ${{inputs.epochs}}
