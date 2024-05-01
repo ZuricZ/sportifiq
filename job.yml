@@ -22,4 +22,4 @@ jobs:
     environment: 
       image: azureml:py-chrome@latest
     inputs:
-      epochs: ${{inputs.epochs}}
+      epochs: ${{parent.inputs.epochs}}
