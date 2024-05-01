@@ -4,7 +4,7 @@ command: >-
   python main_test.py 
   --epochs ${{inputs.epochs}}
 inputs:
-  epochs: ${{variable.SERVE}})
+  epochs: ${{variable.SERVE}}
 environment: azureml:py-chrome@latest
 compute: azureml:cpu-cluster-tennis
 display_name: tennis-reservation-test
