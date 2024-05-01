@@ -7,7 +7,7 @@ az extension add -n ml -y
 ## For backward compatibility - running on old subscription
 # <set_variables>
 GROUP="Test_boys"
-LOCATION="West Europe"
+LOCATION="westeurope"
 WORKSPACE="ml-gregor"
 # </set_variables>
 
