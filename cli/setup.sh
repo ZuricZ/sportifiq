@@ -8,7 +8,7 @@ az extension add -n ml -y
 # <set_variables>
 GROUP="Test_boys"
 LOCATION="West Europe"
-WORKSPACE="ml-tennis"
+WORKSPACE="ml-gregor"
 # </set_variables>
 
 # If RESOURCE_GROUP_NAME is empty, the az configure is pending.

@@ -12,7 +12,7 @@ settings:
   continue_on_step_failure: false
 
 jobs:
-  prep_data:
+  script:
     name: tennis-script
     display_name: tennis-script
     code: src
