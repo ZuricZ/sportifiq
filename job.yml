@@ -20,6 +20,6 @@ jobs:
        python main_test.py 
        --epochs ${{inputs.epochs}}
     environment: 
-      image: azureml:py-chrome@latest
+      image: azureml:py-chrome@5
     inputs:
       epochs: ${{parent.inputs.epochs}}
