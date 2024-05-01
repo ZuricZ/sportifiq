@@ -19,4 +19,4 @@ jobs:
     environment: 
       image: azureml:py-chrome@latest
     inputs:
-      raw_data: test
+      epochs: ${{env.SERVE}} 
