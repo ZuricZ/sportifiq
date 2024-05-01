@@ -1,4 +1,4 @@
-$$schema: https://azuremlschemas.azureedge.net/latest/pipelineJob.schema.json
+$schema: https://azuremlschemas.azureedge.net/latest/pipelineJob.schema.json
 type: pipeline
 experiment_name: tennis-serve
 description: Training Pipeline to run the script
@@ -18,4 +18,4 @@ jobs:
        --epochs ${{inputs.epochs}}
     environment: environment: azureml:py-chrome@latest
     inputs:
-      raw_data: "test"
+      raw_data: test
