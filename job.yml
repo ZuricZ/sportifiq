@@ -15,10 +15,10 @@ jobs:
   script:
     name: tennis-script
     display_name: tennis-script
-    code: ../src/
+    code: src/
     command: >-
        python main_test.py 
        --epochs ${{inputs.epochs}}
-    environment: azureml:mldesigner@latest
+    environment: azureml:tennis-py-chrome@latest
     inputs:
       epochs: ${{parent.inputs.epochs}}
