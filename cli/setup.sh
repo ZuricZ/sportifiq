@@ -4,10 +4,12 @@ az extension add -n ml -y
 
 ## For backward compatibility - running on old subscription
 # <set_variables>
-GROUP="Test_boys"
+GROUP="test_boys"
 LOCATION="westeurope"
 WORKSPACE="ml-gregor"
 # </set_variables>
+
+
 
 # If RESOURCE_GROUP_NAME is empty, the az configure is pending.
 RESOURCE_GROUP_NAME=${RESOURCE_GROUP_NAME:-}

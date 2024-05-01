@@ -19,7 +19,6 @@ jobs:
     command: >-
        python main_test.py 
        --epochs ${{inputs.epochs}}
-    environment: 
-      image: azureml:py-chrome@5
+    environment: azureml:mldesigner-minimal:24
     inputs:
       epochs: ${{parent.inputs.epochs}}
