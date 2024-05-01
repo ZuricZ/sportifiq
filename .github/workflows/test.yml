@@ -6,6 +6,8 @@ on:
   pull_request:
     branches:
       - master
+    paths:
+      - cli/setup.sh
 jobs:
   build:
     runs-on: ubuntu-latest
