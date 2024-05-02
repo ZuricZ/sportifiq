@@ -67,13 +67,13 @@ def main():
     
     with open(args.serve, "rb") as f:
         serve_= json.load(f)
-    
+    print("Tukaj 1")
     venue_url_map = get_venue_to_url_map()
     venue_url = venue_url_map[args.venue]
     #password = decrypt_password()
     password = serve_.get('first-serve')
+    print("Tukaj 2")
     driver = configure_driver(headless_mode=not args.debug_mode)
-
     login_to_website(driver, venue_url, args.user_email, password)
     choose_day(driver, args.day)
     # book sessions for primary court, and rebook unsuccessful bookings on backup court
