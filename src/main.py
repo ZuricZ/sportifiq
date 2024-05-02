@@ -32,6 +32,8 @@ def get_arguments():
                         help="Backup court name")
     parser.add_argument("--user_email", required=True, type=str,
                         help=" User Email")
+    parser.add_argument("--serve", required=True, type=str,
+                        help="First serve")
 
     parser.add_argument("--debug_mode", type=str2bool, default=False, help="Debug mode")
 
@@ -62,9 +64,14 @@ def main():
     :return: None
     """
     args = get_arguments()
+    
+    with open(args.serve, "rb") as f:
+        serve_= json.load(f)
+    
     venue_url_map = get_venue_to_url_map()
     venue_url = venue_url_map[args.venue]
-    password = decrypt_password()
+    #password = decrypt_password()
+    password = serve_.get('first-serve')
     driver = configure_driver(headless_mode=not args.debug_mode)
 
     login_to_website(driver, venue_url, args.user_email, password)

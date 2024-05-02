@@ -1,10 +1,12 @@
 $schema: https://azuremlschemas.azureedge.net/latest/pipelineJob.schema.json
 type: pipeline
 experiment_name: tennis-serve
-description: Training Pipeline to run the script
+description: Pipeline to run the script
 
 inputs:
-  epochs: ${{env.SERVE}} 
+  serve:
+    type: uri_file
+    path: azureml:tennis_data@latest
 
 settings:
   default_datastore: azureml:workspaceblobstore
@@ -17,8 +19,8 @@ jobs:
     display_name: tennis-script
     code: src/
     command: >-
-       python main_test.py 
-       --epochs ${{inputs.epochs}}
+       python main.py 
+       --serve ${{inputs.serve}}
     environment: azureml:tennis-py-chrome@latest
     inputs:
-      epochs: ${{parent.inputs.epochs}}
+      serve: ${{parent.inputs.serve}}
