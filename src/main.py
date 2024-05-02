@@ -2,9 +2,9 @@ import argparse
 import json
 import sys
 
-from src.libs.reserve_session import configure_driver, get_venue_to_url_map, login_to_website, choose_day, \
+from libs.reserve_session import configure_driver, get_venue_to_url_map, login_to_website, choose_day, \
     manage_primary_and_backup_bookings
-from src.libs.utils import decrypt_password, str2bool
+from libs.utils import decrypt_password, str2bool
 
 
 def get_arguments():
