@@ -32,9 +32,6 @@ def get_arguments():
                         help="Backup court name")
     parser.add_argument("--user_email", required=True, type=str,
                         help=" User Email")
-    parser.add_argument("--serve", required=True, type=str,
-                        help="First serve")
-
     parser.add_argument("--debug_mode", type=str2bool, default=False, help="Debug mode")
 
     # Read arguments from json file
@@ -46,6 +43,15 @@ def get_arguments():
     args = parser.parse_args(argv)
     return args
 
+def serve_args():
+    '''Parse input arguments'''
+    parser = argparse.ArgumentParser("train")
+    parser.add_argument("--serve", type=str, help="Path to first serve")
+
+    args = parser.parse_args()
+    with open(args.serve, "rb") as f:
+        serve_= json.load(f)
+    return serve_
 
 def main():
     """
@@ -65,13 +71,12 @@ def main():
     """
     args = get_arguments()
     
-    with open(args.serve, "rb") as f:
-        serve_= json.load(f)
+   
     print("Tukaj 1")
     venue_url_map = get_venue_to_url_map()
     venue_url = venue_url_map[args.venue]
     #password = decrypt_password()
-    password = serve_.get('first-serve')
+    password = serve_args().get('first-serve')
     print("Tukaj 2")
     driver = configure_driver(headless_mode=not args.debug_mode)
     login_to_website(driver, venue_url, args.user_email, password)
