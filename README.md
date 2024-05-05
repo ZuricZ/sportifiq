@@ -18,3 +18,9 @@ The program can be used with a variety of command-line arguments to specify the 
 * `--backup_court_name`: Specify the backup court name
 * `--user_email`: Specify the user email
 * `--debug_mode`: Enable or disable debug mode
+
+# Deployment
+
+Deployment is currently run on Azure Machine Learning platform. To run github action you need to use test.yml, where the schedluer is currently set up for Thursday at 2:00. For setting up GitHub Action you need to have AZURE_CREDENTIALS.
+
+Password is handled by file on Azure Machine Learning and needs to be uploaded manually.
