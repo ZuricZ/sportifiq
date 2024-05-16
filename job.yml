@@ -2,7 +2,6 @@ $schema: https://azuremlschemas.azureedge.net/latest/pipelineJob.schema.json
 type: pipeline
 experiment_name: tennis-serve
 description: Pipeline to run the script
-is_deterministic: false
 
 inputs:
   serve:
@@ -13,6 +12,7 @@ settings:
   default_datastore: azureml:workspaceblobstore
   default_compute: azureml:cpu-cluster-tennis
   continue_on_step_failure: false
+  force_rerun: true
 
 jobs:
   script:
