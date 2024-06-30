@@ -75,7 +75,13 @@ def main():
     venue_url_map = get_venue_to_url_map()
     venue_url = venue_url_map[args.venue]
     #password = decrypt_password()
-    password = serve_args().get('first-serve')
+    #password = serve_args().get('first-serve')
+    import os
+    try:
+        password = os.environ["PASS"]
+    except KeyError:
+        password = "Pass not available!"
+    # or raise an error if it's not available so that the workflow fails
     print("Tukaj 2")
     driver = configure_driver(headless_mode=not args.debug_mode)
     print("Tukaj 3")
