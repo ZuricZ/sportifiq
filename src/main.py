@@ -71,7 +71,7 @@ def main():
     """
     args = get_arguments()
 
-    print("Tukaj 1")
+    print("Here 1")
     venue_url_map = get_venue_to_url_map()
     venue_url = venue_url_map[args.venue]
     #password = decrypt_password()
