@@ -4,29 +4,3 @@ on:
   push:
     branches:
     - prod_action
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - name: checkout repo content
-        uses: actions/checkout@v2 # checkout the repository content
-
-      - name: setup python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.12' # install the python version needed
-
-      - name: install python packages
-        run: |
-            sudo apt-get install -y wget
-            sudo wget -q https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
-            sudo apt-get install -y ./google-chrome-stable_current_amd64.deb
-            python -m pip install --upgrade pip
-            pip install -r requirements.txt
-            pip install webdriver-manager
-
-      - name: execute py script # run main.py
-        working-directory: ./src
-        run: python main.py
-        env:
-          FIRST_SERVE: ${{ secrets.FIRST_SERVE }}
