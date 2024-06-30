@@ -83,7 +83,7 @@ def main():
     driver = configure_driver(headless_mode=not args.debug_mode)
     print("Here 3")
     login_to_website(driver, venue_url, args.user_email, password)
-    print("Tukaj 4")
+    print("Here 4")
     choose_day(driver, args.day)
     # book sessions for primary court, and rebook unsuccessful bookings on backup court
     manage_primary_and_backup_bookings(driver, args)
