@@ -1,7 +1,9 @@
 name: run main.py
 
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - prod_action
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -24,4 +26,7 @@ jobs:
             pip install webdriver-manager
 
       - name: execute py script # run main.py
+        env:
+            SOME_SECRET: ${{ secrets.PASS }}
+        working-directory: ./src
         run: python main.py
