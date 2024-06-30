@@ -3,7 +3,7 @@ name: run main.py
 on:
   push:
     branches:
-      - prod_action
+    - prod_action
 jobs:
   build:
     runs-on: ubuntu-latest
