@@ -79,7 +79,7 @@ def main():
     #password = serve_args().get('first-serve')
     password = os.environ["PASS"]
     print(password)
-    print("Tukaj 2")
+    print("Here 2")
     driver = configure_driver(headless_mode=not args.debug_mode)
     print("Tukaj 3")
     login_to_website(driver, venue_url, args.user_email, password)
