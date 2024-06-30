@@ -1,6 +1,0 @@
-name: run main.py
-
-on:
-  push:
-    branches:
-    - prod_action
