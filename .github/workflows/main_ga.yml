@@ -27,6 +27,6 @@ jobs:
 
       - name: execute py script # run main.py
         env:
-            PASS: ${{ secrets.PASS }}
+          PASS: ${{ secrets.PASS }}
         working-directory: ./src
         run: python main.py
