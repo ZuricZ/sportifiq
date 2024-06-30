@@ -75,10 +75,8 @@ def main():
     print("Here 1")
     venue_url_map = get_venue_to_url_map()
     venue_url = venue_url_map[args.venue]
-    #password = decrypt_password()
-    #password = serve_args().get('first-serve')
+
     password = os.environ["FIRST_SERVE"]
-    print(password)
     print("Here 2")
     driver = configure_driver(headless_mode=not args.debug_mode)
     print("Here 3")
