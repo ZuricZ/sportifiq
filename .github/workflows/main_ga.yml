@@ -26,7 +26,7 @@ jobs:
             pip install webdriver-manager
 
       - name: execute py script # run main.py
-        env:
-          PASS: ${{ secrets.PASS }}
         working-directory: ./src
         run: python main.py
+        env:
+          PASS: ${{ secrets.PASS }}
