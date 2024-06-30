@@ -1,6 +1,7 @@
 import argparse
 import json
 import sys
+import os
 
 from libs.reserve_session import configure_driver, get_venue_to_url_map, login_to_website, choose_day, \
     manage_primary_and_backup_bookings
@@ -76,12 +77,8 @@ def main():
     venue_url = venue_url_map[args.venue]
     #password = decrypt_password()
     #password = serve_args().get('first-serve')
-    import os
-    try:
-        password = os.environ["PASS"]
-    except KeyError:
-        password = "Pass not available!"
-    # or raise an error if it's not available so that the workflow fails
+    password = os.environ["PASS"]
+    print(password)
     print("Tukaj 2")
     driver = configure_driver(headless_mode=not args.debug_mode)
     print("Tukaj 3")
