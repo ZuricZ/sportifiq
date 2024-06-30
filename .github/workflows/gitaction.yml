@@ -1,10 +1,8 @@
-name: run main.py
-
+name: Tennis-Wednesday-Git
 on:
-    push:
-        # Sequence of patterns matched against refs/heads
-        branches:    
-          - prod_action
+  workflow_dispatch:
+  schedule:
+    - cron: "0 2 * * 4"
 
 jobs:
   build:
