@@ -81,7 +81,7 @@ def main():
     print(password)
     print("Here 2")
     driver = configure_driver(headless_mode=not args.debug_mode)
-    print("Tukaj 3")
+    print("Here 3")
     login_to_website(driver, venue_url, args.user_email, password)
     print("Tukaj 4")
     choose_day(driver, args.day)
