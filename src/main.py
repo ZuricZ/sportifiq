@@ -83,10 +83,9 @@ def main():
 
     :return: None
     """
-
+    args = get_arguments()
     if args.debug_mode:
         password = input("Enter password: ")
-        args = get_arguments()
     else:
         args = get_args_from_github_actions()
     
