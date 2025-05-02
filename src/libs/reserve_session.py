@@ -20,7 +20,9 @@ WINDOW_SIZE = "1920,1080"
 USER_AGENT = 'Mozilla/5.0 (Windows NT 4.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/37.0.2049.0 Safari/537.36'
 
 LOGIN_BUTTON = 'loginButton'
+LOGIN_BUTTON_LINK_TEXT = 'Prijavi se'
 SIGNIN_BUTTON = 'signInButton'
+SIGNIN_BUTTON_NAME = 'commit'
 USERNAME_INPUT = 'user_session_email'
 PASSWORD_INPUT = 'user_session_password'
 
@@ -91,6 +93,32 @@ def click_button_by_id(driver, button_id):
     :return: None.
     """
     button = driver.find_element_by_id(button_id)
+    button.click()
+    sleep_random_time()
+
+
+def click_button_by_link_text(driver, link_text):
+    """
+    Clicks a button by its link text.
+
+    :param driver: The WebDriver instance.
+    :param link_text: The link text of the button to be clicked.
+    :return: None.
+    """
+    button = driver.find_element(By.LINK_TEXT, link_text)
+    button.click()
+    sleep_random_time()
+
+
+def click_button_by_name(driver, name):
+    """
+    Clicks a button by its name.
+
+    :param driver: The WebDriver instance.
+    :param name: The name of the button to be clicked.
+    :return: None.
+    """
+    button = driver.find_element(By.NAME, name)
     button.click()
     sleep_random_time()
 
