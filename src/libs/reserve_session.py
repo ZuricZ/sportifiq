@@ -73,6 +73,14 @@ def navigate_to_website(driver, venue_url):
     driver.get(venue_url)
     time.sleep(5)
 
+def click_button_by_xpath(driver, xpath):
+    """
+    Clicks a button by its XPath.
+    """
+    button = driver.find_element_by_xpath(xpath)
+    button.click()
+    sleep_random_time()
+
 
 def click_button_by_id(driver, button_id):
     """
@@ -303,7 +311,7 @@ def get_venue_to_url_map():
     return venue_to_url
 
 
-def login_to_website(driver, venue_url, user_email, password):
+def login_to_website(driver, venue_url, signin_url, user_email, password):
     """
     Logs in to a website using the given credentials.
 
@@ -322,11 +330,14 @@ def login_to_website(driver, venue_url, user_email, password):
     :return: None
     :rtype: NoneType
     """
-    navigate_to_website(driver, venue_url)
-    click_button_by_id(driver, LOGIN_BUTTON)
+    navigate_to_website(driver, signin_url)
+    #click_button_by_id(driver, LOGIN_BUTTON)
     fill_form_by_id(driver, USERNAME_INPUT, user_email)
     fill_form_by_id(driver, PASSWORD_INPUT, password)
-    click_button_by_id(driver, SIGNIN_BUTTON)
+    #click_button_by_id(driver, SIGNIN_BUTTON)
+    click_button_by_xpath(driver, '//*[@id="new_user_session"]/input[2]')
+    navigate_to_website(driver, venue_url)
+
 
 
 def choose_day(driver, day):

@@ -28,5 +28,13 @@ jobs:
       - name: execute py script # run main.py
         env:
             FIRST_SERVE: ${{ secrets.PASS }}
+            DAY: "Sre"
+            HOUR: "18:00"
+            NUM_SESSIONS: 2
+            VENUE: "Tivoli"
+            COURT_NAME: "Plato 1"
+            BACKUP_COURT_NAME: "Plato 2"
+            USER_EMAIL: "zan.zuric@gmail.com"
+
         working-directory: ./src
         run: python main.py

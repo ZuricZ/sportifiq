@@ -54,6 +54,19 @@ def serve_args():
         serve_= json.load(f)
     return serve_
 
+def get_args_from_github_actions():
+    args = get_arguments()
+    args = os.environ["FIRST_SERVE"]
+    args.day = os.environ["DAY"]
+    args.hour = os.environ["HOUR"]
+    args.num_sessions = os.environ["NUM_SESSIONS"]
+    args.venue = os.environ["VENUE"]
+    args.court_name = os.environ["COURT_NAME"]
+    args.backup_court_name = os.environ["BACKUP_COURT_NAME"]
+    args.user_email = os.environ["USER_EMAIL"]
+
+    return args
+
 def main():
     """
     Main Method
@@ -70,18 +83,28 @@ def main():
 
     :return: None
     """
-    args = get_arguments()
 
-    print("Here 1")
+    if args.debug_mode:
+        password = input("Enter password: ")
+        args = get_arguments()
+    else:
+        args = get_args_from_github_actions()
+    
+    print("Complete reading arguments")
+
     venue_url_map = get_venue_to_url_map()
+    signin_url =  'https://sportifiq.com/sl/front/user_sessions/new' 
     venue_url = venue_url_map[args.venue]
-    password = os.environ["FIRST_SERVE"]
-    print(os.environ)
-    print("Here 2")
+
     driver = configure_driver(headless_mode=not args.debug_mode)
-    print("Here 3")
-    login_to_website(driver, venue_url, args.user_email, password)
-    print("Here 4")
+    print("Established connection to website")
+
+    login_to_website(driver = driver, venue_url = venue_url, 
+                     signin_url = signin_url, user_email = args.user_email, 
+                     password = password)
+    
+    print("Successfully logged in")
+
     choose_day(driver, args.day)
     # book sessions for primary court, and rebook unsuccessful bookings on backup court
     manage_primary_and_backup_bookings(driver, args)
