@@ -2,6 +2,7 @@ import argparse
 import json
 import sys
 import os
+from argparse import Namespace
 
 from libs.reserve_session import configure_driver, get_venue_to_url_map, login_to_website, choose_day, \
     manage_primary_and_backup_bookings
@@ -33,6 +34,8 @@ def get_arguments():
                         help="Backup court name")
     parser.add_argument("--user_email", required=True, type=str,
                         help=" User Email")
+    parser.add_argument("--password", required=False, type=str,
+                        help=" User password")
     parser.add_argument("--debug_mode", type=str2bool, default=False, help="Debug mode")
 
     # Read arguments from json file
@@ -55,16 +58,21 @@ def serve_args():
     return serve_
 
 def get_args_from_github_actions():
-    args = get_arguments()
-    args = os.environ["FIRST_SERVE"]
-    args.day = os.environ["DAY"]
-    args.hour = os.environ["HOUR"]
-    args.num_sessions = os.environ["NUM_SESSIONS"]
-    args.venue = os.environ["VENUE"]
-    args.court_name = os.environ["COURT_NAME"]
-    args.backup_court_name = os.environ["BACKUP_COURT_NAME"]
-    args.user_email = os.environ["USER_EMAIL"]
-
+    """
+    Get arguments from environment variables set by GitHub Actions.
+    Returns an argparse.Namespace object with all required attributes.
+    """
+    args = Namespace(
+        day=os.environ["DAY"],
+        hour=os.environ["HOUR"],
+        num_sessions=int(os.environ["NUM_SESSIONS"]),
+        venue=os.environ["VENUE"],
+        court_name=os.environ["COURT_NAME"],
+        backup_court_name=os.environ.get("BACKUP_COURT_NAME"),  # Optional
+        user_email=os.environ["USER_EMAIL"],
+        password=os.environ["FIRST_SERVE"],
+        debug_mode=False  # You can set this based on your needs
+    )
     return args
 
 def main():
@@ -85,7 +93,7 @@ def main():
     """
     args = get_arguments()
     if args.debug_mode:
-        password = input("Enter password: ")
+        args.password = input("Enter password: ")
     else:
         args = get_args_from_github_actions()
     
@@ -100,7 +108,7 @@ def main():
 
     login_to_website(driver = driver, venue_url = venue_url, 
                      signin_url = signin_url, user_email = args.user_email, 
-                     password = password)
+                     password = args.password)
     
     print("Successfully logged in")
 
