@@ -70,7 +70,7 @@ def get_args_from_github_actions():
         court_name=os.environ["COURT_NAME"],
         backup_court_name=os.environ.get("BACKUP_COURT_NAME"),  # Optional
         user_email=os.environ["USER_EMAIL"],
-        password=os.environ["FIRST_SERVE"],
+        password=os.environ["USER_PASS"],
         debug_mode=False  # You can set this based on your needs
     )
     return args

@@ -1,8 +1,8 @@
-name: Tennis-Wednesday-Git
+name: Wednesday-Tennis-Booking
 on:
   workflow_dispatch:
   schedule:
-    - cron: "0 2 * * 4"
+    - cron: "0 1 * * 4"
 
 jobs:
   build:
@@ -27,14 +27,14 @@ jobs:
 
       - name: execute py script # run main.py
         env:
-            FIRST_SERVE: ${{ secrets.PASS }}
+            USER_PASS: ${{ secrets.PASS_1}}
             DAY: "Sre"
             HOUR: "18:00"
             NUM_SESSIONS: 2
             VENUE: "Tivoli"
             COURT_NAME: "Plato 1"
             BACKUP_COURT_NAME: "Plato 2"
-            USER_EMAIL: "zan.zuric@gmail.com"
+            USER_EMAIL: ${{ secrets.USER_1 }}
 
         working-directory: ./src
         run: python main.py
