@@ -1,0 +1,40 @@
+name: Saturday-Tennis-Booking
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 1 * * 6"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout repo content
+        uses: actions/checkout@v2 # checkout the repository content
+
+      - name: setup python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12' # install the python version needed
+
+      - name: install python packages
+        run: |
+            sudo apt-get install -y wget
+            sudo wget -q https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+            sudo apt-get install -y ./google-chrome-stable_current_amd64.deb
+            python -m pip install --upgrade pip
+            pip install -r requirements.txt
+            pip install webdriver-manager
+
+      - name: execute py script # run main.py
+        env:
+            USER_PASS: ${{ secrets.PASS_1}}
+            DAY: "Sob"
+            HOUR: "10:00"
+            NUM_SESSIONS: 2
+            VENUE: "Tivoli"
+            COURT_NAME: "Igrišče 1"
+            BACKUP_COURT_NAME: "Igrišče 2"
+            USER_EMAIL: ${{ secrets.USER_1 }}
+
+        working-directory: ./src
+        run: python main.py
