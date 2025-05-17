@@ -29,11 +29,11 @@ jobs:
         env:
             USER_PASS: ${{ secrets.PASS_1}}
             DAY: "Sre"
-            HOUR: "18:00"
+            HOUR: "17:00"
             NUM_SESSIONS: 2
             VENUE: "Tivoli"
-            COURT_NAME: "Plato 1"
-            BACKUP_COURT_NAME: "Plato 2"
+            COURT_NAME: "Igrišče 1"
+            BACKUP_COURT_NAME: "Igrišče 4"
             USER_EMAIL: ${{ secrets.USER_1 }}
 
         working-directory: ./src
