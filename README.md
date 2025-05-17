@@ -1,9 +1,9 @@
 # Tennis Court Booking Automation
 
 This repository contains a GitHub Actions workflow that automates tennis court bookings. The current workflows are:
-- runs every Sunday at 1:00 AM UTC (Sunday at 18h)
-- runs every Saturday at 1:00 AM UTC (Saturday at 10h)
-- runs every Wednesday at 1:00 AM UTC (Wednesday at 18h)
+- runs every Monday at 1:00 AM UTC (Sunday at 18h)
+- runs every Sunday at 1:00 AM UTC (Saturday at 10h)
+- runs every Thursday at 1:00 AM UTC (Wednesday at 18h)
 
 
 ## Workflow Configuration
