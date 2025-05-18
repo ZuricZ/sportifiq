@@ -1,8 +1,8 @@
-name: Sunday-Tennis-Booking
+name: Monday-Tennis-Booking
 on:
   workflow_dispatch:
   schedule:
-    - cron: "0 1 * * 1"
+    - cron: "0 1 * * 2"
 
 jobs:
   build:
@@ -28,7 +28,7 @@ jobs:
       - name: execute py script # run main.py
         env:
             USER_PASS: ${{ secrets.PASS_1}}
-            DAY: "Ned"
+            DAY: "Pon"
             HOUR: "18:00"
             NUM_SESSIONS: 2
             VENUE: "Tivoli"
