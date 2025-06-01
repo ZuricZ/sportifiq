@@ -4,6 +4,7 @@ This repository contains a GitHub Actions workflow that automates tennis court b
 - runs every Monday at 1:00 AM UTC (Sunday at 18h)
 - runs every Sunday at 1:00 AM UTC (Saturday at 10h)
 - runs every Thursday at 1:00 AM UTC (Wednesday at 18h)
+- runs every day at 0:01 AM UTC (for each day // every_day.yml)
 
 
 ## Workflow Configuration

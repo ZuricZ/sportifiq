@@ -3,6 +3,7 @@ import json
 import sys
 import os
 from argparse import Namespace
+from datetime import datetime, timedelta
 
 from libs.reserve_session import configure_driver, get_venue_to_url_map, login_to_website, choose_day, \
     manage_primary_and_backup_bookings
@@ -62,8 +63,20 @@ def get_args_from_github_actions():
     Get arguments from environment variables set by GitHub Actions.
     Returns an argparse.Namespace object with all required attributes.
     """
+    dict_slo_days = {"Monday": "Pon",
+                 "Tuesday": "Tor", 
+                 "Wednesday": "Sre", 
+                 "Thursday": "Čet", 
+                 "Friday": "Pet", 
+                 "Saturday": "Sob", 
+                 "Sunday": "Ned"} 
+    day = os.environ["DAY"]
+    if day == "*":
+        day = dict_slo_days[(datetime.today() + timedelta(days=6)).strftime("%A")]
+    else:
+        day = day
     args = Namespace(
-        day=os.environ["DAY"],
+        day=day,
         hour=os.environ["HOUR"],
         num_sessions=int(os.environ["NUM_SESSIONS"]),
         venue=os.environ["VENUE"],
