@@ -2,7 +2,7 @@ name: Wednesday-Tennis-Booking
 on:
   workflow_dispatch:
   schedule:
-    - cron: "0 1 * * 4"
+    - cron: "21 0 * * 3"
 
 jobs:
   build:
