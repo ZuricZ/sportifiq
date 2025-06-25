@@ -73,6 +73,7 @@ def get_args_from_github_actions():
     day = os.environ["DAY"]
     if day == "*":
         day = dict_slo_days[(datetime.today() + timedelta(days=6)).strftime("%A")]
+        print(datetime.now())
     else:
         day = day
     args = Namespace(
