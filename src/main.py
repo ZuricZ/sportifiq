@@ -6,8 +6,8 @@ from argparse import Namespace
 from datetime import datetime, timedelta
 
 from libs.reserve_session import (configure_driver, login_to_website, choose_day, manage_primary_and_backup_bookings,
-                                  sleep_until_server_time, get_server_time_europe,
-                                  VENUE_URL_MAPPING, VENUE_HALF_HOUR_SESSION_MAP, DAY_NAME_MAPPING)
+                                  sleep_until_server_time, get_server_time_europe)
+from libs import VENUE_URL_MAPPING, DAY_NAME_MAPPING
 from libs.utils import decrypt_password, str2bool
 
 
