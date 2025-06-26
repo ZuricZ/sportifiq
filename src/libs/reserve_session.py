@@ -1,7 +1,10 @@
 from datetime import datetime, timedelta
 import random
 import time
+from zoneinfo import ZoneInfo
+import warnings
 
+import requests
 from selenium.common.exceptions import NoSuchElementException, TimeoutException, ElementNotInteractableException
 from selenium import webdriver
 from selenium.webdriver import ActionChains
@@ -31,6 +34,74 @@ URL_SVOBODA = "https://svoboda.sportifiq.com/sl"
 URL_KOSEZE = "https://tk-cc-koseze.sportifiq.com/sl"
 
 
+VENUE_URL_MAPPING = CaseInsensitiveDict()
+VENUE_URL_MAPPING.update({
+    'Tivoli': URL_TIVOLI,
+    'Svoboda': URL_SVOBODA,
+    'Koseze': URL_KOSEZE
+})
+
+VENUE_HALF_HOUR_SESSION_MAP = CaseInsensitiveDict()
+VENUE_HALF_HOUR_SESSION_MAP.update({
+    'Tivoli': False,
+    'Svoboda': False,
+    'Koseze': True
+})
+
+DAY_NAME_MAPPING = {
+    "Monday": "Pon",
+    "Tuesday": "Tor",
+    "Wednesday": "Sre",
+    "Thursday": "Čet",
+    "Friday": "Pet",
+    "Saturday": "Sob",
+    "Sunday": "Ned"
+}
+
+
+def get_server_time_europe(url):
+    # Fetch server time from HTTP header and convert to Europe/Berlin time
+    response = requests.head(url)
+    server_time_str = response.headers['Date']  # e.g., 'Wed, 25 Jun 2025 21:39:54 GMT'
+    gmt_time = datetime.strptime(server_time_str, '%a, %d %b %Y %H:%M:%S GMT')
+    gmt_time = gmt_time.replace(tzinfo=ZoneInfo("UTC"))
+    europe_time = gmt_time.astimezone(ZoneInfo("Europe/Berlin"))
+    return europe_time
+
+
+def sleep_until_server_time(url, target_time):
+    """
+    This function is designed to wait until the server's time matches a specified target time.
+    It uses the server's current time obtained from the provided URL and compares it with the target time,
+    adjusting for any discrepancies in days if necessary.
+    The function then calculates the number of seconds to sleep and pauses execution accordingly.
+
+    :param url: A string representing the endpoint to fetch the server time from.
+    This should be a valid URL where the server provides its current time in Europe/Berlin timezone.
+    :type url: str
+    :param target_time: A string representing the target time in the format "HH:MM",
+    which is parsed into hours and minutes for comparison with the server's time.
+    :type target_time: str
+    :return: None
+    """
+    server_time = get_server_time_europe(url)
+    print(f"Server time in Europe/Berlin: {server_time.strftime('%Y-%m-%d %H:%M:%S %Z')}")
+    hour, minute = map(int, target_time.split(":"))
+    target_time = server_time.replace(hour=hour, minute=minute, second=0, microsecond=0)
+    if server_time >= target_time:
+        warnings.warn(
+            f"Target time {target_time} is less than server time {server_time}. Executing the next day.",
+            UserWarning
+        )
+        target_time += timedelta(days=1)
+
+    sleep_seconds = (target_time - server_time).total_seconds()
+    print(f"Sleeping {int(sleep_seconds / 60)} min {int(sleep_seconds % 60)} s "
+          f"until {target_time.strftime('%Y-%m-%d %H:%M:%S %Z')}")
+    if sleep_seconds > 0:
+        time.sleep(sleep_seconds)
+
+
 # CONFIG
 def configure_driver(headless_mode=False):
     """
@@ -53,15 +124,14 @@ def configure_driver(headless_mode=False):
     driver = webdriver.Chrome(ChromeDriverManager().install(), options=chrome_options)
     return driver
 
-
 ## SELENIUM HELPER FUNCTIONS
-def sleep_random_time():
+def sleep_random_time(a=1, b=3):
     """
     Sleeps for a random amount of time between 1 and 3 seconds.
 
     :return: None
     """
-    time.sleep(random.randint(1, 3))
+    time.sleep(random.randint(a, b))
 
 
 def navigate_to_website(driver, venue_url):
@@ -70,7 +140,8 @@ def navigate_to_website(driver, venue_url):
     :param venue_url: URL of the website to navigate to
     :return: None
 
-    This method navigates the web browser to the specified website URL. It waits for 5 seconds after loading the URL to allow the page to fully load.
+    This method navigates the web browser to the specified website URL.
+    It waits for 5 seconds after loading the URL to allow the page to fully load.
     """
     driver.get(venue_url)
     time.sleep(5)
@@ -171,16 +242,27 @@ def wait_for_element(wait, locator, by):
         raise ex
 
 
+def wait_for_elements(wait, locator, by):
+    try:
+        return wait.until(EC.presence_of_all_elements_located((by, locator)))
+    except TimeoutException as ex:
+        print(f"Exception: {str(ex)} waiting for presence of any element located by {by}: {locator}")
+        raise ex
+
+
 def click_on_element_by_locator(driver, locator, by):
     """
     :param driver: WebDriver instance to interact with the web browser.
-    :param locator: The locator strategy used to find the element. Can be any valid locator strategy supported by Selenium.
+    :param locator: The locator strategy used to find the element.
+                    Can be any valid locator strategy supported by Selenium.
     :param by: The value of the locator used to identify the element.
     :return: None
 
-    This method clicks on the element located using the provided locator strategy and value. It first finds the element using the WebDriver instance and then simulates a click action on it.
+    This method clicks on the element located using the provided locator strategy and value.
+    It first finds the element using the WebDriver instance and then simulates a click action on it.
 
-    If the element cannot be interacted with, an ElementNotInteractableException is raised, and an error message is printed before re-raising the exception.
+    If the element cannot be interacted with, an ElementNotInteractableException is raised,
+    and an error message is printed before re-raising the exception.
     """
     try:
         element = driver.find_element(by, locator)
@@ -209,23 +291,23 @@ def book_single_session(driver, start_hour, end_hour, court):
     close_button_xpath = '//*[@id="flashNoticeCentered"]/div[3]/button'
 
     try:
-        wait = WebDriverWait(driver, 5)
+        wait = WebDriverWait(driver, 2.5)
         selectable_button = wait_for_element(wait, selectable_xpath, By.XPATH)
         # selectable_button.click()
         actions = ActionChains(driver)
         actions.move_to_element(selectable_button)
         actions.perform()
-        sleep_random_time()
+        sleep_random_time(1,2)
 
         try:
             session_button_xpath = session_xpath_template.format(session_time, court)
             session_button = wait_for_element(wait, session_button_xpath, By.XPATH)
-        except TimeoutException:
+        except TimeoutException:  # does the site use "original-title" instead of "title"?
             session_button_xpath = original_session_xpath_template.format(session_time, court)
             session_button = wait_for_element(wait, session_button_xpath, By.XPATH)
 
         session_button.click()
-        sleep_random_time()
+        sleep_random_time(1,2)
 
         try:
             click_on_element_by_locator(driver, confirm_reservation_button_xpath, By.XPATH)
@@ -253,11 +335,16 @@ def book_half_hour_sessions(driver, start_hour, court):
     :param court: The court number to be booked.
     :return: True if both the half-hour sessions are successfully booked, False otherwise.
 
-    This method books two consecutive half-hour sessions on a specified court, starting from the given start_hour. It uses the provided webdriver instance to interact with the booking website.
+    This method books two consecutive half-hour sessions on a specified court, starting from the given start_hour.
+    It uses the provided webdriver instance to interact with the booking website.
 
-    The method first calculates the start and end times for the two half-hour sessions. It then attempts to book the first session using the 'book_single_session' method. If the first session booking is successful, it proceeds to book the second session using the same method.
+    The method first calculates the start and end times for the two half-hour sessions.
+    It then attempts to book the first session using the 'book_single_session' method.
+    If the first session booking is successful, it proceeds to book the second session using the same method.
 
-    If both sessions are successfully booked, it returns True. If the second session booking fails, it does not undo the booking for the first session. Note that there is a TODO comment in the code indicating that handling this scenario is not implemented yet.
+    If both sessions are successfully booked, it returns True. If the second session booking fails,
+    it does not undo the booking for the first session.
+    Note that there is a TODO comment in the code indicating that handling this scenario is not implemented yet.
 
     If the first session booking fails, it returns False.
 
@@ -297,17 +384,24 @@ def book_sessions(driver, start_hour, num_sessions, court):
     :param court: The court number or identifier for the sessions.
     :return: A list containing the success status of each booked session.
 
-    Book sessions function that allows the user to book multiple sessions at a given start hour for a specific court. This function takes in the WebDriver object, start hour, number of sessions, and court identifier as parameters. The start hour can be provided as a string in the format 'HH:MM' or as a datetime object. The function iterates over the number of sessions, booking each session one hour apart from the previous one.
+    Book sessions function that allows the user to book multiple sessions at a given start hour for a specific court.
+    This function takes in the WebDriver object, start hour, number of sessions, and court identifier as parameters.
+    The start hour can be provided as a string in the format 'HH:MM' or as a datetime object.
+    The function iterates over the number of sessions, booking each session one hour apart from the previous one.
 
-    Within each iteration, a random short wait time is added between actions using the `sleep_random_time` function. The `book_single_session` function is called to attempt to book a session for the provided start hour, end hour (calculated as start_hour + timedelta(hours=1)), and court. If the booking is unsuccessful, another attempt is made by calling the `book_half_hour_sessions` function with the start hour and court.
+    Within each iteration, a random short wait time is added between actions using the `sleep_random_time` function.
+    The `book_single_session` function is called to attempt to book a session for the provided start hour,
+    end hour (calculated as start_hour + timedelta(hours=1)), and court. If the booking is unsuccessful,
+    another attempt is made by calling the `book_half_hour_sessions` function with the start hour and court.
 
-    The success status of each booking is stored in a list, and the start hour is incremented by one hour for the next iteration. Finally, the function returns the list of success statuses.
+    The success status of each booking is stored in a list, and the start hour is incremented by one hour for the next iteration.
+    Finally, the function returns the list of success statuses.
     """
     if isinstance(start_hour, str):
         start_hour = datetime.strptime(start_hour, '%H:%M')
     success_list = []
 
-    for _ in range(num_sessions):
+    for i in range(num_sessions):
         # add some random short wait time between actions
         sleep_random_time()
         success = book_single_session(driver, start_hour, start_hour + timedelta(hours=1), court)
@@ -389,11 +483,15 @@ def rebook_failed_sessions_on_backup_court(driver, args, booking_results, start_
 
     :return: None.
 
-    This method rebooks failed sessions on a backup court. It iterates over the booking_results list and checks if the booking for each session was successful. If not, and a backup_court_name is provided in the args object, it attempts to book the session on the backup court.
+    This method rebooks failed sessions on a backup court. It iterates over the booking_results list
+    and checks if the booking for each session was successful. If not, and a backup_court_name is provided
+    in the args object, it attempts to book the session on the backup court.
 
-    The method uses the start_hour parameter to calculate the start time for each session. It then calls the book_sessions method with the appropriate parameters to attempt the booking on the backup court.
+    The method uses the start_hour parameter to calculate the start time for each session.
+    It then calls the book_sessions method with the appropriate parameters to attempt the booking on the backup court.
 
-    If the booking on the backup court also fails, an exception is raised with a detailed error message indicating the court names and start time that could not be booked.
+    If the booking on the backup court also fails, an exception is raised with a detailed error message
+    indicating the court names and start time that could not be booked.
     """
     for index, booking_successful in enumerate(booking_results):
         if not booking_successful and args.backup_court_name is not None:

@@ -48,8 +48,17 @@ def get_arguments():
     args = parser.parse_args(argv)
     return args
 
+
 def serve_args():
-    '''Parse input arguments'''
+    """
+    This function sets up an argument parser for a training script and retrieves the path to a
+    file that contains data needed for serving from the parsed arguments.
+
+    :param args: The parsed command-line arguments should include the `--serve` option specifying the path to the serve file.
+    :type args: argparse.Namespace
+    :return: The content of the serve file loaded as JSON.
+    :rtype: dict
+    """
     parser = argparse.ArgumentParser("train")
     parser.add_argument("--serve", type=str, help="Path to first serve")
 
@@ -57,6 +66,7 @@ def serve_args():
     with open(args.serve, "rb") as f:
         serve_= json.load(f)
     return serve_
+
 
 def get_args_from_github_actions():
     """
@@ -105,6 +115,7 @@ def main():
 
     :return: None
     """
+
     args = get_arguments()
     if args.debug_mode:
         args.password = input("Enter password: ")

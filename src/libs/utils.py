@@ -1,4 +1,6 @@
 import argparse
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
 from cryptography.fernet import Fernet
 
@@ -50,3 +52,18 @@ def decrypt_password():
     with open('password.dat', 'rb') as file_object:
         encryptedpwd = file_object.read()
     return cipher_suite.decrypt(encryptedpwd).decode('utf-8')
+
+
+def convert_to_european_time(server_time_str):
+    # Extract datetime from string (remove "Server time: " prefix)
+    datetime_str = server_time_str.split(": ", 1)[1]
+
+    # Parse GMT time and set UTC timezone
+    gmt_time = datetime.strptime(datetime_str, '%a, %d %b %Y %H:%M:%S GMT')
+    gmt_time = gmt_time.replace(tzinfo=ZoneInfo("UTC"))
+
+    # Convert to Europe/Berlin time (auto-handles CET/CEST)
+    europe_time = gmt_time.astimezone(ZoneInfo("Europe/Berlin"))
+    return europe_time.strftime('%Y-%m-%d %H:%M:%S %Z')
+
+

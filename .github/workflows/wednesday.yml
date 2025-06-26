@@ -27,7 +27,7 @@ jobs:
 
       - name: execute py script # run main.py
         env:
-            USER_PASS: ${{ secrets.PASS_1}}
+            USER_PASS: ${{ secrets.PASS_1 }}
             DAY: "Sre"
             HOUR: "17:00"
             NUM_SESSIONS: 2
