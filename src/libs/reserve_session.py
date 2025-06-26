@@ -288,6 +288,7 @@ def book_single_session(driver, start_hour, end_hour, court):
     original_session_xpath_template = '//*[@original-title="{0} {1}"]'
     confirm_reservation_button_xpath = '//*[@id="confirmBookingBottomSend"]'
     accept_button_xpath = '//*[@id="bookingDetailsModalBottomSend"]'
+    reservation_success_xpath = '//*[@id="flashNoticeCentered"]//p[@id="flashNoticeText"]'
     close_button_xpath = '//*[@id="flashNoticeCentered"]/div[3]/button'
 
     try:
@@ -317,6 +318,14 @@ def book_single_session(driver, start_hour, end_hour, court):
             except:
                 raise NoSuchElementException
 
+        popup_element = wait_for_element(wait, reservation_success_xpath, By.XPATH)
+        if popup_element.text == (msg := "Rezervacije tako daleč v prihodnosti niso mogoče."):
+            warnings.warn(
+                f"Couldn't book session of court {court} at {session_time}: {msg}",
+                UserWarning
+            )
+            return False
+
         sleep_random_time()
         try:
             close_button = wait.until(EC.element_to_be_clickable((By.XPATH, close_button_xpath)))
@@ -325,6 +334,10 @@ def book_single_session(driver, start_hour, end_hour, court):
             pass
         return True
     except (NoSuchElementException, TimeoutException):
+        warnings.warn(
+            f"Couldn't book session of court {court} at {session_time}. The court appears to be unavailable.",
+            UserWarning
+        )
         return False
 
 
