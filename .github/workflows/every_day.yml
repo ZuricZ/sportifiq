@@ -2,7 +2,7 @@ name: Every-Day-Tennis-Booking
 on:
   workflow_dispatch:
   schedule:
-    - cron: "56 21 * * *"
+    - cron: "53 21 * * *"
 
 jobs:
   build:
@@ -33,7 +33,7 @@ jobs:
             NUM_SESSIONS: 2
             VENUE: "Tivoli"
             COURT_NAME: "Igrišče 1"
-            BACKUP_COURT_NAME: "Igrišče 2"
+            BACKUP_COURT_NAME: "Igrišče 4"
             EXECUTION_TIME: "00:00"
             USER_EMAIL: ${{ secrets.USER_1 }}
 
