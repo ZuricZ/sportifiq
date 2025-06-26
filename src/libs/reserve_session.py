@@ -9,54 +9,13 @@ from selenium.common.exceptions import NoSuchElementException, TimeoutException,
 from selenium import webdriver
 from selenium.webdriver import ActionChains
 from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
-from .utils import CaseInsensitiveDict
-
-
-WINDOW_SIZE = "1920,1080"
-USER_AGENT = 'Mozilla/5.0 (Windows NT 4.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/37.0.2049.0 Safari/537.36'
-
-LOGIN_BUTTON = 'loginButton'
-LOGIN_BUTTON_LINK_TEXT = 'Prijavi se'
-SIGNIN_BUTTON = 'signInButton'
-SIGNIN_BUTTON_NAME = 'commit'
-USERNAME_INPUT = 'user_session_email'
-PASSWORD_INPUT = 'user_session_password'
-
-URL_TIVOLI = "https://tivoli.sportifiq.com/sl"
-URL_SVOBODA = "https://svoboda.sportifiq.com/sl"
-URL_KOSEZE = "https://tk-cc-koseze.sportifiq.com/sl"
-
-
-VENUE_URL_MAPPING = CaseInsensitiveDict()
-VENUE_URL_MAPPING.update({
-    'Tivoli': URL_TIVOLI,
-    'Svoboda': URL_SVOBODA,
-    'Koseze': URL_KOSEZE
-})
-
-VENUE_HALF_HOUR_SESSION_MAP = CaseInsensitiveDict()
-VENUE_HALF_HOUR_SESSION_MAP.update({
-    'Tivoli': False,
-    'Svoboda': False,
-    'Koseze': True
-})
-
-DAY_NAME_MAPPING = {
-    "Monday": "Pon",
-    "Tuesday": "Tor",
-    "Wednesday": "Sre",
-    "Thursday": "Čet",
-    "Friday": "Pet",
-    "Saturday": "Sob",
-    "Sunday": "Ned"
-}
+from . import WINDOW_SIZE, USER_AGENT, USERNAME_INPUT, PASSWORD_INPUT, VENUE_HALF_HOUR_SESSION_MAP
 
 
 def get_server_time_europe(url):
