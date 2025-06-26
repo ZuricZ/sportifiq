@@ -18,6 +18,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from . import WINDOW_SIZE, USER_AGENT, USERNAME_INPUT, PASSWORD_INPUT, VENUE_HALF_HOUR_SESSION_MAP
 
 
+# SERVER TIME HELPERS
 def get_server_time_europe(url):
     # Fetch server time from HTTP header and convert to Europe/Berlin time
     response = requests.head(url)
@@ -82,6 +83,7 @@ def configure_driver(headless_mode=False):
     
     driver = webdriver.Chrome(ChromeDriverManager().install(), options=chrome_options)
     return driver
+
 
 ## SELENIUM HELPER FUNCTIONS
 def sleep_random_time(a=1, b=3):
@@ -453,7 +455,7 @@ def rebook_failed_sessions_on_backup_court(driver, args, booking_results, start_
     for index, booking_successful in enumerate(booking_results):
         if not booking_successful and args.backup_court_name is not None:
             new_start_time = start_hour + timedelta(hours=index)
-            if not book_sessions(driver, new_start_time, num_sessions=1, court=args.backup_court_name):
+            if not book_sessions(driver, new_start_time, num_sessions=1, court=args.backup_court_name, venue=args.venue):
                 raise Exception(
                     f"Could not book sessions for either {args.court_name} or {args.backup_court_name} "
                     f"at {new_start_time.strftime('%H:%M')}."
