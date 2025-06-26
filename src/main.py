@@ -32,7 +32,7 @@ def get_arguments():
                         help="Venue of booking")
     parser.add_argument("--court_name", required=True, type=str,
                         help="Exact name of the court to reserve")
-    parser.add_argument("--execution_time", required=False, type=str,
+    parser.add_argument("--execution_time", required=False, type=str, default=None,
                         help="Execution time in %H:%M format")
     parser.add_argument("--backup_court_name", type=str,
                         help="Backup court name")
@@ -46,7 +46,7 @@ def get_arguments():
     with open('config.json', 'r', encoding='utf-8') as f:
         config = json.load(f)
 
-    argv = [[f'--{k}', str(v)] for k, v in config.items()]
+    argv = [[f'--{k}', str(v)] for k, v in config.items() if v is not None]
     argv = sum(argv, [])
     args = parser.parse_args(argv)
     return args
