@@ -2,7 +2,7 @@ name: Wednesday-Tennis-Booking
 on:
   workflow_dispatch:
   schedule:
-    - cron: "21 0 * * 3"
+    - cron: "56 21 * * *"
 
 jobs:
   build:
@@ -29,11 +29,12 @@ jobs:
         env:
             USER_PASS: ${{ secrets.PASS_1 }}
             DAY: "Sre"
-            HOUR: "17:00"
+            HOUR: "18:00"
             NUM_SESSIONS: 2
             VENUE: "Tivoli"
             COURT_NAME: "Igrišče 1"
             BACKUP_COURT_NAME: "Igrišče 4"
+            EXECUTION_TIME: "00:00"
             USER_EMAIL: ${{ secrets.USER_1 }}
 
         working-directory: ./src

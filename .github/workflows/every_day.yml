@@ -34,6 +34,7 @@ jobs:
             VENUE: "Tivoli"
             COURT_NAME: "Igrišče 1"
             BACKUP_COURT_NAME: "Igrišče 2"
+            EXECUTION_TIME: "00:00"
             USER_EMAIL: ${{ secrets.USER_1 }}
 
         working-directory: ./src
