@@ -32,6 +32,8 @@ def get_arguments():
                         help="Venue of booking")
     parser.add_argument("--court_name", required=True, type=str,
                         help="Exact name of the court to reserve")
+    parser.add_argument("--execution_time", required=False, type=str,
+                        help="Execution time in %H:%M format")
     parser.add_argument("--backup_court_name", type=str,
                         help="Backup court name")
     parser.add_argument("--user_email", required=True, type=str,
@@ -74,31 +76,20 @@ def get_args_from_github_actions():
     Get arguments from environment variables set by GitHub Actions.
     Returns an argparse.Namespace object with all required attributes.
     """
-    dict_slo_days = {"Monday": "Pon",
-                 "Tuesday": "Tor", 
-                 "Wednesday": "Sre", 
-                 "Thursday": "Čet", 
-                 "Friday": "Pet", 
-                 "Saturday": "Sob", 
-                 "Sunday": "Ned"} 
-    day = os.environ["DAY"]
-    if day == "*":
-        day = dict_slo_days[(datetime.today() + timedelta(days=6)).strftime("%A")]
-        print(datetime.now())
-    else:
-        day = day
     args = Namespace(
-        day=day,
+        day=os.environ["DAY"],
         hour=os.environ["HOUR"],
         num_sessions=int(os.environ["NUM_SESSIONS"]),
         venue=os.environ["VENUE"],
         court_name=os.environ["COURT_NAME"],
         backup_court_name=os.environ.get("BACKUP_COURT_NAME"),  # Optional
+        execution_time=os.environ.get("EXECUTION_TIME"),  # Optional (None as default)
         user_email=os.environ["USER_EMAIL"],
         password=os.environ["USER_PASS"],
         debug_mode=False  # You can set this based on your needs
     )
     return args
+
 
 def main():
     """
@@ -135,6 +126,15 @@ def main():
                      password=args.password)
     
     print("Successfully logged in")
+
+    # Sleep until session reservation is open
+    if args.execution_time is not None:
+        sleep_until_server_time(url=signin_url, target_time=args.execution_time)
+
+    # Set current time to server time measured at execution time
+    if args.day == "*":
+        today = get_server_time_europe(signin_url).date()
+        args.day = DAY_NAME_MAPPING[(today + timedelta(days=6)).strftime("%A")]
 
     choose_day(driver, args.day)
     # book sessions for primary court, and rebook unsuccessful bookings on backup court

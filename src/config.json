@@ -1,10 +1,11 @@
 {
     "day": "Sre",
-    "hour": "18:00",
+    "hour": "14:00",
     "num_sessions": 2,
     "venue": "Tivoli",
-    "court_name": "Plato 1",
+    "court_name": "Igrišče 4",
     "backup_court_name": "Plato 2",
-    "user_email": "zan.zuric@gmail.com",
-    "debug_mode": false
+    "user_email": "greg.vudi@gmail.com",
+    "execution_time": "00:01",
+    "debug_mode": true
 }
