@@ -6,7 +6,7 @@ from argparse import Namespace
 from datetime import datetime, timedelta
 
 from libs.reserve_session import (configure_driver, login_to_website, choose_day, manage_primary_and_backup_bookings,
-                                  sleep_until_server_time, get_server_time_europe)
+                                  sleep_until_server_time, get_server_time_europe, book_from_available_sessions)
 from libs import VENUE_URL_MAPPING, DAY_NAME_MAPPING
 from libs.utils import decrypt_password, str2bool
 
@@ -138,8 +138,8 @@ def main():
 
     choose_day(driver, args.day)
     # book sessions for primary court, and rebook unsuccessful bookings on backup court
-    manage_primary_and_backup_bookings(driver, args)
-
+    # manage_primary_and_backup_bookings(driver, args)
+    book_from_available_sessions(driver, args)  # TODO: this is experimental
 
 if __name__ == '__main__':
     main()

@@ -1,8 +1,10 @@
+from collections import defaultdict
 from datetime import datetime, timedelta
 import random
 import time
 from zoneinfo import ZoneInfo
 import warnings
+import re
 
 import requests
 from selenium.common.exceptions import NoSuchElementException, TimeoutException, ElementNotInteractableException
@@ -233,6 +235,35 @@ def click_on_element_by_locator(driver, locator, by):
         raise ex
 
 
+def get_all_available_sessions(wait):
+    pattern = re.compile(r"^\d{2}:\d{2}-\d{2}:\d{2} .+ \d+$")
+    elements = wait_for_elements(
+        wait,
+        '//*[contains(@title, ":") and contains(@title, "-") and contains(@title, " ")]',
+        By.XPATH
+    )
+
+    matching_elements = [el for el in elements if pattern.match(el.get_attribute("title"))]
+    slots = [el.get_attribute('title') for el in matching_elements]
+
+    court_avail = defaultdict(list)
+
+    for slot in slots:
+        time_range, court = slot.split(' ', 1)  # Split on the first space
+        court_avail[court].append(time_range)
+
+    return dict(court_avail)
+
+
+def move_to_selectable(driver, selectable_xpath, wait):
+    selectable_button = wait_for_element(wait, selectable_xpath, By.XPATH)
+    # selectable_button.click()
+    actions = ActionChains(driver)
+    actions.move_to_element(selectable_button)
+    actions.perform()
+    sleep_random_time(1, 2)
+
+
 ## SESSION BOOKING FUNCTIONS
 def book_single_session(driver, start_hour, end_hour, court):
     """
@@ -254,12 +285,7 @@ def book_single_session(driver, start_hour, end_hour, court):
 
     try:
         wait = WebDriverWait(driver, 2.5)
-        selectable_button = wait_for_element(wait, selectable_xpath, By.XPATH)
-        # selectable_button.click()
-        actions = ActionChains(driver)
-        actions.move_to_element(selectable_button)
-        actions.perform()
-        sleep_random_time(1,2)
+        move_to_selectable(driver, selectable_xpath, wait)
 
         try:
             session_button_xpath = session_xpath_template.format(session_time, court)
@@ -388,6 +414,45 @@ def book_sessions(driver, start_hour, num_sessions, court, venue):
         start_hour += timedelta(hours=1)
 
     return success_list
+
+
+def book_from_available_sessions(driver, args):
+    assert args.venue.lower() != 'koseze' "This method assumes hourly sessions."
+
+    start_hour = datetime.strptime(args.hour, '%H:%M')
+    selectable_xpath = '//*[@id="selectable"]'
+
+    session_times = [
+        f'{(start_hour + timedelta(hours=i)).strftime("%H:%M")}-'
+        f'{(start_hour + timedelta(hours=i + 1)).strftime("%H:%M")}'
+        for i in range(args.num_sessions)
+    ]
+
+    try:
+        wait = WebDriverWait(driver, 2.5)
+        move_to_selectable(driver, selectable_xpath, wait)
+        session_availability_dict = get_all_available_sessions(wait)
+
+    except (NoSuchElementException, TimeoutException):
+        warnings.warn(
+            f"Couldn't book session of at {session_times}. No court appears to be available.",
+            UserWarning
+        )
+        return False
+
+    priority_courts = [args.court_name, args.backup_court_name]
+    court_list = priority_courts + [c for c in session_availability_dict if c not in priority_courts]
+
+    for court in court_list:
+        if all([target_session in session_availability_dict[court] for target_session in session_times]):
+            success_list = book_sessions(driver, start_hour, args.num_sessions, court, args.venue)
+            if all(success_list):
+                print("Successfully booked sessions for court '{}'.".format(court))
+                break
+            else:
+                print("Failed to book some sessions for court '{}'.".format(court))
+
+    return None
 
 
 ## MAIN HELPER FUNCTIONS
