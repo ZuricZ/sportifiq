@@ -376,12 +376,13 @@ def book_half_hour_sessions(driver, start_hour, court):
         return False
 
 
-def book_sessions(driver, start_hour, num_sessions, court):
+def book_sessions(driver, start_hour, num_sessions, court, venue):
     """
     :param driver: The WebDriver object that will be used to interact with the web application.
     :param start_hour: The starting hour of the sessions to be booked. Can be provided as a string in the format 'HH:MM' or as a datetime object.
     :param num_sessions: The number of sessions to be booked.
     :param court: The court number or identifier for the sessions.
+    :param venue: The venue of the booking.
     :return: A list containing the success status of each booked session.
 
     Book sessions function that allows the user to book multiple sessions at a given start hour for a specific court.
@@ -405,7 +406,7 @@ def book_sessions(driver, start_hour, num_sessions, court):
         # add some random short wait time between actions
         sleep_random_time()
         success = book_single_session(driver, start_hour, start_hour + timedelta(hours=1), court)
-        if not success:
+        if not success and VENUE_HALF_HOUR_SESSION_MAP[venue]:
             sleep_random_time()
             success = book_half_hour_sessions(driver, start_hour, court)
 
@@ -416,22 +417,6 @@ def book_sessions(driver, start_hour, num_sessions, court):
 
 
 ## MAIN HELPER FUNCTIONS
-def get_venue_to_url_map():
-    """
-
-    This method returns a mapping of venue names to their corresponding URLs.
-
-    :return: A mapping of venue names to their corresponding URLs.
-
-    """
-    venue_to_url = CaseInsensitiveDict()
-    venue_to_url.update({
-        'Tivoli': URL_TIVOLI,
-        'Svoboda': URL_SVOBODA,
-        'Koseze': URL_KOSEZE
-    })
-    return venue_to_url
-
 
 def login_to_website(driver, venue_url, signin_url, user_email, password):
     """
@@ -517,7 +502,7 @@ def manage_primary_and_backup_bookings(driver, args):
 
     """
     start_hour = datetime.strptime(args.hour, '%H:%M')
-    booking_results = book_sessions(driver, start_hour, num_sessions=args.num_sessions, court=args.court_name)
+    booking_results = book_sessions(driver, start_hour, num_sessions=args.num_sessions, court=args.court_name, venue=args.venue)
     if not all(booking_results):
         rebook_failed_sessions_on_backup_court(driver, args, booking_results, start_hour)
 

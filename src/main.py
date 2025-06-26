@@ -5,8 +5,9 @@ import os
 from argparse import Namespace
 from datetime import datetime, timedelta
 
-from libs.reserve_session import configure_driver, get_venue_to_url_map, login_to_website, choose_day, \
-    manage_primary_and_backup_bookings
+from libs.reserve_session import (configure_driver, login_to_website, choose_day, manage_primary_and_backup_bookings,
+                                  sleep_until_server_time, get_server_time_europe,
+                                  VENUE_URL_MAPPING, VENUE_HALF_HOUR_SESSION_MAP, DAY_NAME_MAPPING)
 from libs.utils import decrypt_password, str2bool
 
 
@@ -124,16 +125,14 @@ def main():
     
     print("Complete reading arguments")
 
-    venue_url_map = get_venue_to_url_map()
-    signin_url =  'https://sportifiq.com/sl/front/user_sessions/new' 
-    venue_url = venue_url_map[args.venue]
-
     driver = configure_driver(headless_mode=not args.debug_mode)
     print("Established connection to website")
 
-    login_to_website(driver = driver, venue_url = venue_url, 
-                     signin_url = signin_url, user_email = args.user_email, 
-                     password = args.password)
+    signin_url = 'https://sportifiq.com/sl/front/user_sessions/new'
+    venue_url = VENUE_URL_MAPPING[args.venue]
+    login_to_website(driver=driver, venue_url=venue_url,
+                     signin_url=signin_url, user_email=args.user_email,
+                     password=args.password)
     
     print("Successfully logged in")
 
