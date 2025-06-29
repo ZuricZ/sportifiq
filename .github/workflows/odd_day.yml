@@ -1,0 +1,41 @@
+name: Odd-Day-Tennis-Booking
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "55 21 1-31/2 * *"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout repo content
+        uses: actions/checkout@v2 # checkout the repository content
+
+      - name: setup python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12' # install the python version needed
+
+      - name: install python packages
+        run: |
+            sudo apt-get install -y wget
+            sudo wget -q https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+            sudo apt-get install -y ./google-chrome-stable_current_amd64.deb
+            python -m pip install --upgrade pip
+            pip install -r requirements.txt
+            pip install webdriver-manager
+
+      - name: execute py script # run main.py
+        env:
+            USER_EMAIL: ${{ secrets.USER_1 }}
+            USER_PASS: ${{ secrets.PASS_1 }}
+            DAY: "*"
+            HOUR: "18:00"
+            NUM_SESSIONS: 2
+            VENUE: "Tivoli"
+            COURT_NAME: "Igrišče 1"
+            BACKUP_COURT_NAME: "Igrišče 5"
+            EXECUTION_TIME: "00:00"
+
+        working-directory: ./src
+        run: python main.py
