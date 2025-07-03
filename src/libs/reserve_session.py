@@ -97,6 +97,18 @@ def sleep_random_time(a=1, b=3):
     time.sleep(random.randint(a, b))
 
 
+def choose_day(driver, day):
+    """
+    :param driver: The web driver object used to interact with the web page.
+    :param day: The day of the week to choose.
+    :return: None
+
+    This method clicks on the button corresponding to the given day on the web page using the provided web driver object.
+    """
+    day_button = driver.find_element_by_xpath(f'//a[text()="{day}"]')
+    day_button.click()
+
+
 def navigate_to_website(driver, venue_url):
     """
     :param driver: WebDriver object used to control the web browser
@@ -213,6 +225,14 @@ def wait_for_elements(wait, locator, by):
         raise ex
 
 
+def wait_for_element_text(wait, element, timeout_msg="Element text did not appear."):
+    try:
+        wait.until(lambda driver: element.text.strip())
+        return element.text
+    except TimeoutException:
+        return timeout_msg
+
+
 def click_on_element_by_locator(driver, locator, by):
     """
     :param driver: WebDriver instance to interact with the web browser.
@@ -306,11 +326,9 @@ def book_single_session(driver, start_hour, end_hour, court):
                 raise NoSuchElementException
 
         popup_element = wait_for_element(wait, reservation_success_xpath, By.XPATH)
-        if popup_element.text == (msg := "Rezervacije tako daleč v prihodnosti niso mogoče."):
-            warnings.warn(
-                f"Couldn't book session of court {court} at {session_time}: {msg}",
-                UserWarning
-            )
+        msg = wait_for_element_text(wait, popup_element, 'No final pop-up message located.')
+        if msg != "Uspešno ste rezervirali ure!":
+            warnings.warn(f"Couldn't book session of court {court} at {session_time}: {msg}", UserWarning)
             return False
 
         sleep_random_time()
@@ -321,10 +339,8 @@ def book_single_session(driver, start_hour, end_hour, court):
             pass
         return True
     except (NoSuchElementException, TimeoutException):
-        warnings.warn(
-            f"Couldn't book session of court {court} at {session_time}. The court appears to be unavailable.",
-            UserWarning
-        )
+        warnings.warn(f"Couldn't book session of court {court} at {session_time}. "
+                      f"The court appears to be unavailable.", UserWarning)
         return False
 
 
@@ -416,45 +432,6 @@ def book_sessions(driver, start_hour, num_sessions, court, venue):
     return success_list
 
 
-def book_from_available_sessions(driver, args):
-    assert args.venue.lower() != 'koseze' "This method assumes hourly sessions."
-
-    start_hour = datetime.strptime(args.hour, '%H:%M')
-    selectable_xpath = '//*[@id="selectable"]'
-
-    session_times = [
-        f'{(start_hour + timedelta(hours=i)).strftime("%H:%M")}-'
-        f'{(start_hour + timedelta(hours=i + 1)).strftime("%H:%M")}'
-        for i in range(args.num_sessions)
-    ]
-
-    try:
-        wait = WebDriverWait(driver, 2.5)
-        move_to_selectable(driver, selectable_xpath, wait)
-        session_availability_dict = get_all_available_sessions(wait)
-
-    except (NoSuchElementException, TimeoutException):
-        warnings.warn(
-            f"Couldn't book session of at {session_times}. No court appears to be available.",
-            UserWarning
-        )
-        return False
-
-    priority_courts = [args.court_name, args.backup_court_name]
-    court_list = priority_courts + [c for c in session_availability_dict if c not in priority_courts]
-
-    for court in court_list:
-        if all([target_session in session_availability_dict[court] for target_session in session_times]):
-            success_list = book_sessions(driver, start_hour, args.num_sessions, court, args.venue)
-            if all(success_list):
-                print("Successfully booked sessions for court '{}'.".format(court))
-                break
-            else:
-                print("Failed to book some sessions for court '{}'.".format(court))
-
-    return None
-
-
 ## MAIN HELPER FUNCTIONS
 
 def login_to_website(driver, venue_url, signin_url, user_email, password):
@@ -483,19 +460,6 @@ def login_to_website(driver, venue_url, signin_url, user_email, password):
     #click_button_by_id(driver, SIGNIN_BUTTON)
     click_button_by_xpath(driver, '//*[@id="new_user_session"]/input[2]')
     navigate_to_website(driver, venue_url)
-
-
-
-def choose_day(driver, day):
-    """
-    :param driver: The web driver object used to interact with the web page.
-    :param day: The day of the week to choose.
-    :return: None
-
-    This method clicks on the button corresponding to the given day on the web page using the provided web driver object.
-    """
-    day_button = driver.find_element_by_xpath(f'//a[text()="{day}"]')
-    day_button.click()
 
 
 def rebook_failed_sessions_on_backup_court(driver, args, booking_results, start_hour):
@@ -544,4 +508,53 @@ def manage_primary_and_backup_bookings(driver, args):
     booking_results = book_sessions(driver, start_hour, num_sessions=args.num_sessions, court=args.court_name, venue=args.venue)
     if not all(booking_results):
         rebook_failed_sessions_on_backup_court(driver, args, booking_results, start_hour)
+
+
+def book_from_available_sessions(driver, args):
+    # assert args.venue.lower() != 'koseze' "This method assumes hourly sessions."
+
+    start_hour = datetime.strptime(args.hour, '%H:%M')
+    selectable_xpath = '//*[@id="selectable"]'
+
+    session_times = [
+        f'{(start_hour + timedelta(hours=i)).strftime("%H:%M")}-'
+        f'{(start_hour + timedelta(hours=i + 1)).strftime("%H:%M")}'
+        for i in range(args.num_sessions)
+    ]
+
+    session_times_half = [
+        f'{(start_hour + timedelta(hours=i, minutes=30)).strftime("%H:%M")}-'
+        f'{(start_hour + timedelta(hours=i + 1, minutes=30)).strftime("%H:%M")}'
+        for i in range(args.num_sessions)
+    ]
+
+    try:
+        wait = WebDriverWait(driver, 2.5)
+        move_to_selectable(driver, selectable_xpath, wait)
+        session_availability_dict = get_all_available_sessions(wait)
+
+    except (NoSuchElementException, TimeoutException):
+        warnings.warn(f"Couldn't book sessions of at {session_times}. No court appears to be available.", UserWarning)
+
+    else:
+        priority_courts = [args.court_name, args.backup_court_name]
+        court_list = priority_courts + [c for c in session_availability_dict if c not in priority_courts]
+
+        for court in court_list:
+            available_sessions = session_availability_dict[court]
+
+            if all(s in available_sessions for s in session_times):
+                times_to_book = session_times
+            elif all(s in available_sessions for s in session_times_half):
+                times_to_book = session_times_half
+            else:
+                continue  # court doesn't have full availability so skip
+
+            booking_time = times_to_book[0].split('-')[0]
+            success_list = book_sessions(driver, booking_time, args.num_sessions, court, args.venue)
+            if all(success_list):
+                print(f"Successfully booked sessions for court '{court}' at {times_to_book}.")
+                break
+            else:
+                warnings.warn(f"Failed to book some sessions for court '{court}' at {times_to_book}.", UserWarning)
 

@@ -137,10 +137,13 @@ def main():
         args.day = DAY_NAME_MAPPING[(today + timedelta(days=6)).strftime("%A")]
 
     choose_day(driver, args.day)
+
+    # check which courts are available, give priority to primary and backup courts
+    book_from_available_sessions(driver, args)
+
     # book sessions for primary court, and rebook unsuccessful bookings on backup court
     # manage_primary_and_backup_bookings(driver, args)
-    book_from_available_sessions(driver, args)  # TODO: this is experimental
 
 if __name__ == '__main__':
     main()
-    print('Booked successfully!')
+    # print('Booked successfully!')
