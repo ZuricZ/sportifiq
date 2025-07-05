@@ -7,7 +7,8 @@ import warnings
 import re
 
 import requests
-from selenium.common.exceptions import NoSuchElementException, TimeoutException, ElementNotInteractableException
+from selenium.common.exceptions import NoSuchElementException, TimeoutException, ElementNotInteractableException, \
+    ElementClickInterceptedException
 from selenium import webdriver
 from selenium.webdriver import ActionChains
 from selenium.webdriver.chrome.options import Options
@@ -314,8 +315,14 @@ def book_single_session(driver, start_hour, end_hour, court):
             session_button_xpath = original_session_xpath_template.format(session_time, court)
             session_button = wait_for_element(wait, session_button_xpath, By.XPATH)
 
-        session_button.click()
-        sleep_random_time(1,2)
+        try:
+            session_button.click()
+        except ElementClickInterceptedException as E:
+            print(f"Could not close the pop-up. Refreshing the page: {E.msg}")
+            driver.refresh()
+            return False
+        else:
+            sleep_random_time(1,2)
 
         try:
             click_on_element_by_locator(driver, confirm_reservation_button_xpath, By.XPATH)
@@ -326,18 +333,19 @@ def book_single_session(driver, start_hour, end_hour, court):
                 raise NoSuchElementException
 
         popup_element = wait_for_element(wait, reservation_success_xpath, By.XPATH)
-        msg = wait_for_element_text(wait, popup_element, 'No final pop-up message located.')
+        msg = wait_for_element_text(wait, popup_element, "No final pop-up message located.")
         if msg != "Uspešno ste rezervirali ure!":
             warnings.warn(f"Couldn't book session of court {court} at {session_time}: {msg}", UserWarning)
-            return False
-
+            result = False
+        else:
+            result = True
         sleep_random_time()
         try:
             close_button = wait.until(EC.element_to_be_clickable((By.XPATH, close_button_xpath)))
             close_button.click()
         except TimeoutException:
-            pass
-        return True
+            result = False
+        return result
     except (NoSuchElementException, TimeoutException):
         warnings.warn(f"Couldn't book session of court {court} at {session_time}. "
                       f"The court appears to be unavailable.", UserWarning)
@@ -420,7 +428,7 @@ def book_sessions(driver, start_hour, num_sessions, court, venue):
 
     for i in range(num_sessions):
         # add some random short wait time between actions
-        sleep_random_time()
+        sleep_random_time(1,2)
         success = book_single_session(driver, start_hour, start_hour + timedelta(hours=1), court)
         if not success and VENUE_HALF_HOUR_SESSION_MAP[venue]:
             sleep_random_time()
