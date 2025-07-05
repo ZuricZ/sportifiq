@@ -2,7 +2,7 @@ name: Odd-Day-Tennis-Booking
 on:
   workflow_dispatch:
   schedule:
-    - cron: "55 21 1-31/2 * *"
+    - cron: "53 21 1-31/2 * *"
 
 jobs:
   build:
