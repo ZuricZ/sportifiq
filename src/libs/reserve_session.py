@@ -32,7 +32,7 @@ def get_server_time_europe(url):
     return europe_time
 
 
-def sleep_until_server_time(url, target_time):
+def sleep_until_server_time(url, target_time, failsafe_seconds=None):
     """
     This function is designed to wait until the server's time matches a specified target time.
     It uses the server's current time obtained from the provided URL and compares it with the target time,
@@ -45,6 +45,8 @@ def sleep_until_server_time(url, target_time):
     :param target_time: A string representing the target time in the format "HH:MM",
     which is parsed into hours and minutes for comparison with the server's time.
     :type target_time: str
+    :param failsafe_seconds: maximum allowed sleep time in seconds
+    :type failsafe_seconds: float
     :return: None
     """
     server_time = get_server_time_europe(url)
@@ -59,6 +61,7 @@ def sleep_until_server_time(url, target_time):
         target_time += timedelta(days=1)
 
     sleep_seconds = (target_time - server_time).total_seconds()
+    sleep_seconds = sleep_seconds if failsafe_seconds is None else min(failsafe_seconds, sleep_seconds)
     print(f"Sleeping {int(sleep_seconds / 60)} min {int(sleep_seconds % 60)} s "
           f"until {target_time.strftime('%Y-%m-%d %H:%M:%S %Z')}")
     if sleep_seconds > 0:

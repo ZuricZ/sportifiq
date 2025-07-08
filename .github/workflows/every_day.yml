@@ -2,19 +2,19 @@ name: Every-Day-Tennis-Booking
 on:
   workflow_dispatch:
   schedule:
-    - cron: "53 21 * * *"
+    - cron: "53 21 * * *"  # max 15 mins before, because failsafe time is hardcoded
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - name: checkout repo content
-        uses: actions/checkout@v2 # checkout the repository content
+        uses: actions/checkout@v2  # checkout the repository content
 
       - name: setup python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.12' # install the python version needed
+          python-version: '3.12'  # install the python version needed
 
       - name: install python packages
         run: |
@@ -23,9 +23,9 @@ jobs:
             sudo apt-get install -y ./google-chrome-stable_current_amd64.deb
             python -m pip install --upgrade pip
             pip install -r requirements.txt
-            pip install webdriver-manager
+#            pip install webdriver-manager
 
-      - name: execute py script # run main.py
+      - name: execute py script  # run main.py
         env:
             USER_EMAIL: ${{ secrets.USER_1 }}
             USER_PASS: ${{ secrets.PASS_1 }}

@@ -107,6 +107,7 @@ def main():
 
     :return: None
     """
+    print(f"Server Time: {get_server_time_europe('https://sportifiq.com/sl/home')}")
 
     args = get_arguments()
     if args.debug_mode:
@@ -129,7 +130,7 @@ def main():
 
     # Sleep until session reservation is open
     if args.execution_time is not None:
-        sleep_until_server_time(url=signin_url, target_time=args.execution_time)
+        sleep_until_server_time(url=signin_url, target_time=args.execution_time, failsafe_seconds=15 * 60) # wait for at most 15min
 
     # Set current time to server time measured at execution time
     if args.day == "*":
