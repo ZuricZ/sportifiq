@@ -1,0 +1,59 @@
+name: Book court
+
+on:
+  # Runs every Saturday at 06:00 UTC to book a slot 7 days out.
+  # Adjust the cron and the DAYS_AHEAD value below to suit your schedule.
+  schedule:
+    - cron: '0 6 * * 6'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run (log only, no browser)'
+        type: boolean
+        default: false
+
+jobs:
+  book:
+    runs-on: ubuntu-latest
+
+    env:
+      SPORTIFIQ_PASSWORD: ${{ secrets.SPORTIFIQ_PASSWORD }}
+      GIST_TOKEN: ${{ secrets.GIST_TOKEN }}
+      GIST_ID: ${{ secrets.GIST_ID }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Compute target date
+        id: date
+        # Books 7 days from today (next occurrence of the same weekday).
+        # Change DAYS_AHEAD to 6 or 8 if the booking window is different.
+        run: |
+          TARGET=$(python -c "
+          from datetime import date, timedelta
+          print((date.today() + timedelta(days=7)).isoformat())
+          ")
+          echo "target=$TARGET" >> "$GITHUB_OUTPUT"
+
+      - name: Book court
+        run: |
+          python -m src.main \
+            --venue "${{ vars.VENUE }}" \
+            --day "${{ steps.date.outputs.target }}" \
+            --hour "${{ vars.HOUR }}" \
+            --num_sessions "${{ vars.NUM_SESSIONS }}" \
+            --court_name "${{ vars.COURT_NAME }}" \
+            --backup_court_name "${{ vars.BACKUP_COURT_NAME }}" \
+            --user_email "${{ secrets.SPORTIFIQ_EMAIL }}"
+        env:
+          # Pass dry_run as a no-op flag; main.py doesn't support it yet but
+          # adding it here makes it easy to wire up later.
+          DRY_RUN: ${{ inputs.dry_run }}

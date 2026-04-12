@@ -1,0 +1,59 @@
+name: Cancel reservation
+
+on:
+  workflow_dispatch:
+    inputs:
+      reservation_id:
+        description: 'Reservation ID (from Gist)'
+        required: true
+      token:
+        description: 'HMAC token from cancel email'
+        required: true
+      exp:
+        description: 'Token expiry (Unix timestamp)'
+        required: true
+
+jobs:
+  cancel:
+    runs-on: ubuntu-latest
+
+    env:
+      SPORTIFIQ_PASSWORD: ${{ secrets.SPORTIFIQ_PASSWORD }}
+      GIST_TOKEN: ${{ secrets.GIST_TOKEN }}
+      GIST_ID: ${{ secrets.GIST_ID }}
+      CANCEL_SECRET: ${{ secrets.CANCEL_SECRET }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Validate HMAC token
+        run: |
+          python - <<'EOF'
+          import hmac, hashlib, sys, time, os
+          secret = os.environ["CANCEL_SECRET"]
+          res_id = "${{ inputs.reservation_id }}"
+          tok    = "${{ inputs.token }}"
+          exp    = int("${{ inputs.exp }}")
+          if time.time() > exp:
+              sys.exit("Cancel token has expired.")
+          payload  = f"{res_id}:{exp}"
+          expected = hmac.new(secret.encode(), payload.encode(), hashlib.sha256).hexdigest()
+          if not hmac.compare_digest(expected, tok):
+              sys.exit("Invalid cancel token.")
+          print("Token valid.")
+          EOF
+
+      - name: Cancel booking
+        run: |
+          python -m src.cancel \
+            --venue "${{ vars.VENUE }}" \
+            --reservation_id "${{ inputs.reservation_id }}" \
+            --user_email "${{ secrets.SPORTIFIQ_EMAIL }}"

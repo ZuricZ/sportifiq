@@ -1,0 +1,31 @@
+name: Send booking reminders
+
+on:
+  schedule:
+    - cron: '0 8 * * *'   # Daily at 08:00 UTC
+  workflow_dispatch: {}
+
+jobs:
+  remind:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Send reminders
+        run: python -m src.reminder --user_email "${{ secrets.SPORTIFIQ_EMAIL }}"
+        env:
+          GIST_TOKEN: ${{ secrets.GIST_TOKEN }}
+          GIST_ID: ${{ secrets.GIST_ID }}
+          CANCEL_SECRET: ${{ secrets.CANCEL_SECRET }}
+          GMAIL_USER: ${{ secrets.GMAIL_USER }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          GH_PAGES_URL: ${{ vars.GH_PAGES_URL }}
