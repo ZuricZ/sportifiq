@@ -64,19 +64,43 @@ class SportifiqPage:
         that matches the website text ("Čet", "ČET", "Pet", …).  The match is
         case-insensitive.  If the requested day is already active (today /
         "DANES") the click is skipped because no data-action is present.
+
+        Uses JS execution to avoid StaleElementReferenceException caused by
+        the Stimulus timetable controller re-rendering divs after page load.
         """
         self._selected_day = day
         target = day.upper()
-        elements = self._driver.find_elements(By.CSS_SELECTOR, "div[data-date]")
-        for el in elements:
-            date_attr = el.get_attribute("data-date") or ""
-            first_line = (el.text.split("\n")[0] or "").upper()
-            if date_attr == day or first_line == target:
-                if el.get_attribute("data-action"):
-                    el.click()
-                    self._random_sleep()
-                return
-        raise ValueError(f"Day '{day}' not found in timetable")
+
+        result = self._driver.execute_script(
+            """
+            const day = arguments[0];
+            const target = arguments[1];
+            const divs = document.querySelectorAll('div[data-date]');
+            for (const div of divs) {
+                const dateAttr = div.getAttribute('data-date') || '';
+                const firstLine = (div.innerText.split('\\n')[0] || '').toUpperCase();
+                if (dateAttr === day || firstLine === target) {
+                    if (div.getAttribute('data-action')) {
+                        div.click();
+                        return 'clicked';
+                    }
+                    return 'already_selected';
+                }
+            }
+            return 'not_found';
+            """,
+            day,
+            target,
+        )
+
+        if result == "not_found":
+            # Day not in the visible strip — try the date input for ISO dates
+            if len(day) == 10 and day[4] == "-":
+                self._set_date_input(day)
+            else:
+                raise ValueError(f"Day '{day}' not found in timetable")
+        if result == "clicked":
+            self._random_sleep()
 
     def book_slot(self, session_time: str, court: str) -> bool:
         """Attempt to book a single time slot.
@@ -154,6 +178,23 @@ class SportifiqPage:
             )
         if self._selected_day:
             self.select_day(self._selected_day)
+
+    def _set_date_input(self, iso_date: str) -> None:
+        """Set the date picker input and wait for the timetable to reload."""
+        self._driver.execute_script(
+            """
+            const inp = document.querySelector('input[type="date"]');
+            if (!inp) return;
+            const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
+                window.HTMLInputElement.prototype, 'value'
+            ).set;
+            nativeInputValueSetter.call(inp, arguments[0]);
+            inp.dispatchEvent(new Event('input', {bubbles: true}));
+            inp.dispatchEvent(new Event('change', {bubbles: true}));
+            """,
+            iso_date,
+        )
+        self._random_sleep()
 
     @staticmethod
     def _fmt(t: datetime) -> str:
