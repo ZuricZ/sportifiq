@@ -1,78 +1,80 @@
 import argparse
 import json
+import logging
 import sys
+from pathlib import Path
 
-from src.libs.reserve_session import configure_driver, get_venue_to_url_map, login_to_website, choose_day, \
-    manage_primary_and_backup_bookings
-from src.libs.utils import decrypt_password, str2bool
+from src.booking_service import BookingService
+from src.config_loader import get_password, load_venue_config
+from src.driver import create_driver
+from src.models import BookingRequest
+from src.page import SportifiqPage
 
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+    datefmt="%Y-%m-%dT%H:%M:%S",
+)
+logger = logging.getLogger(__name__)
 
-def get_arguments():
-    """
-    Return the arguments parsed from command line and config file.
-
-    :return: The parsed arguments.
-    """
-    parser = argparse.ArgumentParser(description="Book court for given day and time.")
-    parser.add_argument("--day", required=True,
-                        choices=["Pon", "Tor", "Sre", "Čet", "Pet", "Sob", "Ned",
-                                 "Ponedeljek", "Torek", "Sreda", "Četrtek", "Petek", "Sobota", "Nedelja"],
-                        help="Target Day. Be sure to check the name of the day on the website. "
-                             "First two days seem to be fully spelled out")
-    parser.add_argument("--hour", required=True, type=str,
-                        help="Target Hour in '%H:%M' format")
-    parser.add_argument("--num_sessions", type=int, required=True,
-                        help="Number of *hourly* sessions to book")
-    parser.add_argument("--venue", required=True,
-                        choices=['tivoli', 'svoboda', 'koseze'], type=str.lower,
-                        help="Venue of booking")
-    parser.add_argument("--court_name", required=True, type=str,
-                        help="Exact name of the court to reserve")
-    parser.add_argument("--backup_court_name", type=str,
-                        help="Backup court name")
-    parser.add_argument("--user_email", required=True, type=str,
-                        help=" User Email")
-
-    parser.add_argument("--debug_mode", type=str2bool, default=False, help="Debug mode")
-
-    # Read arguments from json file
-    with open('config.json', 'r', encoding='utf-8') as f:
-        config = json.load(f)
-
-    argv = sys.argv[1:] + [[f'--{k}', str(v)] for k, v in config.items()]
-    argv = sum(argv, [])
-    args = parser.parse_args(argv)
-    return args
+_CONFIG_FILE = Path("config.json")
+_KNOWN_CONFIG_KEYS = {"venue", "day", "hour", "num_sessions", "court_name", "backup_court_name", "user_email", "debug_mode"}
 
 
-def main():
-    """
-    Main Method
+def _parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Book a court on Sportifiq.")
+    parser.add_argument("--venue", required=True, type=str.lower, help="Venue key (e.g. koseze)")
+    parser.add_argument("--day", required=True, help="Day name as shown on the website (e.g. Čet)")
+    parser.add_argument("--hour", required=True, help="Start time in HH:MM format")
+    parser.add_argument("--num_sessions", required=True, type=int, help="Number of consecutive hourly sessions")
+    parser.add_argument("--court_name", required=True, help="Exact court name as shown on the website")
+    parser.add_argument("--backup_court_name", default=None, help="Fallback court name")
+    parser.add_argument("--user_email", required=True, help="Sportifiq account email")
+    parser.add_argument("--debug_mode", action="store_true", default=False, help="Run with visible browser window")
 
-    This method is the entry point to the program. It performs the following steps:
-    1. Retrieves command line arguments using the `get_arguments()` function.
-    2. Retrieves a mapping of venue names to their corresponding URLs using the `get_venue_to_url_map()` function.
-    3. Retrieves the URL for the specified venue from the mapping.
-    4. Decrypts the password using the `decrypt_password()` function.
-    5. Configures the web driver with the specified options, such as headless mode, using the `configure_driver()` function.
-    6. Logs in to the website using the `login_to_website()` function, providing the driver, venue URL, user email, and decrypted password as arguments.
-    7. Chooses the specified day using the `choose_day()` function, providing the driver and day as arguments.
-    8. Manages the primary and backup bookings using the `manage_primary_and_backup_bookings()` function, providing the driver and command line arguments as arguments.
+    # config.json provides defaults; CLI args always win
+    if _CONFIG_FILE.exists():
+        with open(_CONFIG_FILE, encoding="utf-8") as f:
+            defaults = json.load(f)
+        parser.set_defaults(**{k: v for k, v in defaults.items() if k in _KNOWN_CONFIG_KEYS})
 
-    :return: None
-    """
-    args = get_arguments()
-    venue_url_map = get_venue_to_url_map()
-    venue_url = venue_url_map[args.venue]
-    password = decrypt_password()
-    driver = configure_driver(headless_mode=not args.debug_mode)
-
-    login_to_website(driver, venue_url, args.user_email, password)
-    choose_day(driver, args.day)
-    # book sessions for primary court, and rebook unsuccessful bookings on backup court
-    manage_primary_and_backup_bookings(driver, args)
+    return parser.parse_args()
 
 
-if __name__ == '__main__':
+def main() -> None:
+    args = _parse_args()
+
+    venue_config = load_venue_config(args.venue)
+    password = get_password()
+
+    request = BookingRequest(
+        venue_config=venue_config,
+        day=args.day,
+        time=args.hour,
+        num_sessions=args.num_sessions,
+        court=args.court_name,
+        backup_court=args.backup_court_name,
+        user_email=args.user_email,
+    )
+
+    with create_driver(headless=not args.debug_mode) as driver:
+        page = SportifiqPage(driver)
+        page.login(venue_config.url, args.user_email, password)
+        page.select_day(args.day)
+
+        service = BookingService(page)
+        results = service.run(request)
+
+    successes = [r for r in results if r.success]
+    failures = [r for r in results if not r.success]
+
+    logger.info("Done: %d/%d sessions booked.", len(successes), len(results))
+    for r in failures:
+        logger.error("Failed: %s at %s — %s", r.court, r.time, r.message)
+
+    if failures:
+        sys.exit(1)
+
+
+if __name__ == "__main__":
     main()
-    print('Booked successfully!')
