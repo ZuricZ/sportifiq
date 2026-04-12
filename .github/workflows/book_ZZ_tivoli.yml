@@ -12,9 +12,9 @@ on:
 
 jobs:
   book:
-    environment: ZZ
     uses: ./.github/workflows/_book.yml
     with:
+      environment: ZZ
       venue: tivoli
       hour: "18:00"          # TODO: confirm preferred hour
       num_sessions: 1
