@@ -27,6 +27,7 @@ class BookingResult:
     court: str
     time: str
     message: str = ""
+    site_id: str = ""  # Sportifiq booking ID captured from redirect URL
 
 
 @dataclass
@@ -39,3 +40,4 @@ class Reservation:
     booked_at: str    # ISO 8601 UTC, e.g. "2026-04-12T10:00:00Z"
     status: str       # "confirmed" | "cancelled"
     reminder_sent: bool = False
+    site_id: str = ""  # Sportifiq numeric booking ID (from /members/bookings/{site_id})

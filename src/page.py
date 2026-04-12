@@ -30,11 +30,12 @@ class SportifiqPage:
     _DURATION_SELECT_ID = "duration-select"
     _CONFIRM_BUTTON_XPATH = '//button[contains(., "Potrdi rezervacijo")]'
 
+    # "Izbriši" = Delete (the actual label on the booking detail page)
     _CANCEL_BUTTON_XPATH = (
+        '//a[normalize-space(.)="Izbriši"] | '
+        '//button[normalize-space(.)="Izbriši"] | '
         '//a[contains(., "Prekliči rezervacijo")] | '
-        '//button[contains(., "Prekliči rezervacijo")] | '
-        '//a[contains(., "Odpovedi")] | '
-        '//button[contains(., "Odpovedi")]'
+        '//button[contains(., "Prekliči rezervacijo")]'
     )
 
     _WAIT_TIMEOUT = 15
@@ -109,7 +110,7 @@ class SportifiqPage:
         if result == "clicked":
             self._random_sleep()
 
-    def book_slot(self, session_time: str, court: str) -> bool:
+    def book_slot(self, session_time: str, court: str) -> tuple[bool, str]:
         """Attempt to book a single time slot.
 
         Args:
@@ -117,7 +118,8 @@ class SportifiqPage:
             court: Exact court name as shown on the website (e.g. "BALON HC1").
 
         Returns:
-            True if the booking was confirmed, False if the slot was unavailable.
+            (success, site_id) — site_id is the Sportifiq numeric booking ID extracted
+            from the post-confirmation redirect URL; empty string on failure.
         """
         try:
             start_str, end_str = session_time.split("-")
@@ -134,7 +136,7 @@ class SportifiqPage:
             try:
                 link = self._wait.until(EC.element_to_be_clickable((By.XPATH, xpath)))
             except TimeoutException:
-                return False
+                return False, ""
 
             link.click()
             self._random_sleep()
@@ -153,7 +155,7 @@ class SportifiqPage:
                     # 1-hour option not available; go back and report failure
                     self._driver.back()
                     self._wait.until(lambda d: "bookings/new" not in d.current_url)
-                    return False
+                    return False, ""
                 sel.select_by_index(1)
             # else: leave default 0:30h selected
 
@@ -166,13 +168,17 @@ class SportifiqPage:
             # Wait until redirected away from the booking form
             self._wait.until(lambda d: "bookings/new" not in d.current_url)
 
+            # Capture the site booking ID from the redirect URL before navigating away.
+            # The URL is typically "{base}/members/bookings/{numeric_id}".
+            site_id = self._extract_booking_id(self._driver.current_url)
+
             # For multi-session runs: ensure the location page is showing the
             # correct day so the next slot search succeeds.
             self._ensure_correct_day()
-            return True
+            return True, site_id
 
         except (NoSuchElementException, TimeoutException):
-            return False
+            return False, ""
 
     def cancel_booking(self, booking_id: str) -> bool:
         """Navigate to the booking detail page and click the cancel button.
@@ -220,6 +226,13 @@ class SportifiqPage:
         return True
 
     # --- Private helpers ---
+
+    @staticmethod
+    def _extract_booking_id(url: str) -> str:
+        """Pull the numeric booking ID from a URL like .../members/bookings/12345."""
+        import re
+        m = re.search(r"/members/bookings/(\d+)", url)
+        return m.group(1) if m else ""
 
     def _ensure_correct_day(self) -> None:
         """After a redirect, make sure we're on the location page / correct day."""

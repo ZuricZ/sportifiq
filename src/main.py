@@ -87,6 +87,7 @@ def main() -> None:
             court=r.court,
             booked_at=booked_at,
             status="confirmed",
+            site_id=r.site_id,
         ))
 
     logger.info("Done: %d/%d sessions booked.", len(successes), len(results))

@@ -56,12 +56,13 @@ class BookingService:
     def _book_hourly(self, start: datetime, court: str) -> BookingResult:
         end = start + timedelta(hours=1)
         session_time = f"{start.strftime(_TIME_FORMAT)}-{end.strftime(_TIME_FORMAT)}"
-        success = self._page.book_slot(session_time, court)
+        success, site_id = self._page.book_slot(session_time, court)
         return BookingResult(
             success=success,
             court=court,
             time=session_time,
             message="Booked" if success else "Slot unavailable",
+            site_id=site_id,
         )
 
     def _book_as_two_half_hours(self, start: datetime, court: str) -> BookingResult:
@@ -72,10 +73,12 @@ class BookingService:
         second_time = f"{mid.strftime(_TIME_FORMAT)}-{end.strftime(_TIME_FORMAT)}"
         full_time = f"{start.strftime(_TIME_FORMAT)}-{end.strftime(_TIME_FORMAT)}"
 
-        if not self._page.book_slot(first_time, court):
+        success1, site_id1 = self._page.book_slot(first_time, court)
+        if not success1:
             return BookingResult(success=False, court=court, time=first_time, message="First half-hour unavailable")
 
-        if not self._page.book_slot(second_time, court):
+        success2, site_id2 = self._page.book_slot(second_time, court)
+        if not success2:
             # First slot was booked but second failed — manual cleanup may be needed.
             logger.warning(
                 "Partial booking: %s booked %s but %s failed — manual cancellation may be needed.",
@@ -86,7 +89,7 @@ class BookingService:
                 message="Second half-hour unavailable (first half-hour was booked)",
             )
 
-        return BookingResult(success=True, court=court, time=full_time, message="Booked as two half-hours")
+        return BookingResult(success=True, court=court, time=full_time, message="Booked as two half-hours", site_id=site_id2)
 
     def _retry_failed_on_backup(
         self, results: list[BookingResult], start: datetime, backup_court: str
