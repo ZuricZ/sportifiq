@@ -21,6 +21,10 @@ on:
       days_ahead:
         type: number
         default: 7
+      execution_time:
+        description: 'Sleep until this server time before booking (HH:MM Europe/Berlin, e.g. 07:00)'
+        type: string
+        default: ''
       dry_run:
         type: boolean
         default: false
@@ -54,6 +58,7 @@ jobs:
 
       - name: Book court
         run: |
+          EXEC_TIME="${{ inputs.execution_time }}"
           python -m src.main \
             --venue "${{ inputs.venue }}" \
             --day "${{ steps.date.outputs.target }}" \
@@ -61,6 +66,7 @@ jobs:
             --num_sessions "${{ inputs.num_sessions }}" \
             --court_name "${{ inputs.court_name }}" \
             --backup_court_name "${{ inputs.backup_court_name }}" \
-            --user_email "${{ secrets.SPORTIFIQ_EMAIL }}"
+            --user_email "${{ secrets.SPORTIFIQ_EMAIL }}" \
+            ${EXEC_TIME:+--execution_time "$EXEC_TIME"}
         env:
           DRY_RUN: ${{ inputs.dry_run }}

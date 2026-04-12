@@ -2,7 +2,13 @@ import argparse
 import json
 import logging
 import sys
+import time
+import warnings
+from datetime import datetime
 from pathlib import Path
+from zoneinfo import ZoneInfo
+
+import requests
 
 from src.booking_service import BookingService
 from src.config_loader import get_password, load_venue_config
@@ -18,7 +24,35 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 _CONFIG_FILE = Path("config.json")
-_KNOWN_CONFIG_KEYS = {"venue", "day", "hour", "num_sessions", "court_name", "backup_court_name", "user_email", "debug_mode"}
+_KNOWN_CONFIG_KEYS = {"venue", "day", "hour", "num_sessions", "court_name", "backup_court_name", "user_email", "debug_mode", "execution_time"}
+_LOGIN_URL = "https://sportifiq.com/user_sessions/new"
+_FAILSAFE_SECONDS = 15 * 60  # never sleep more than 15 minutes
+
+
+def _sleep_until_server_time(target_time_str: str) -> None:
+    """Sleep until the Sportifiq server clock reaches target_time_str (HH:MM, Europe/Berlin).
+
+    Fetches the server's current time from the HTTP Date header so local clock
+    skew doesn't matter.  Exits immediately if already past the target.
+    Caps sleep at _FAILSAFE_SECONDS to avoid hanging indefinitely.
+    """
+    response = requests.head(_LOGIN_URL, timeout=10)
+    server_time_str = response.headers["Date"]
+    gmt_time = datetime.strptime(server_time_str, "%a, %d %b %Y %H:%M:%S GMT")
+    gmt_time = gmt_time.replace(tzinfo=ZoneInfo("UTC"))
+    server_time = gmt_time.astimezone(ZoneInfo("Europe/Berlin"))
+
+    hour, minute = map(int, target_time_str.split(":"))
+    target = server_time.replace(hour=hour, minute=minute, second=0, microsecond=0)
+
+    sleep_secs = (target - server_time).total_seconds()
+    if sleep_secs <= 0:
+        warnings.warn(f"execution_time {target_time_str} is already past (server: {server_time:%H:%M:%S}). Proceeding immediately.")
+        return
+
+    sleep_secs = min(sleep_secs, _FAILSAFE_SECONDS)
+    logger.info("Server time %s — sleeping %.0fs until %s.", server_time.strftime("%H:%M:%S"), sleep_secs, target_time_str)
+    time.sleep(sleep_secs)
 
 
 def _parse_args() -> argparse.Namespace:
@@ -30,6 +64,7 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--court_name", required=True, help="Exact court name as shown on the website")
     parser.add_argument("--backup_court_name", default=None, help="Fallback court name")
     parser.add_argument("--user_email", required=True, help="Sportifiq account email")
+    parser.add_argument("--execution_time", default=None, help="Sleep until this server time before booking (HH:MM, Europe/Berlin)")
     parser.add_argument("--debug_mode", action="store_true", default=False, help="Run with visible browser window")
 
     # config.json provides defaults; CLI args always win
@@ -43,6 +78,9 @@ def _parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = _parse_args()
+
+    if args.execution_time:
+        _sleep_until_server_time(args.execution_time)
 
     venue_config = load_venue_config(args.venue)
     password = get_password()
