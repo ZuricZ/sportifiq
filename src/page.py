@@ -1,6 +1,8 @@
 import random
+import re
 import time
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
+from typing import Optional
 
 from selenium.common.exceptions import (
     NoSuchElementException,
@@ -10,6 +12,8 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.remote.webdriver import WebDriver
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import Select, WebDriverWait
+
+from .models import SiteBooking
 
 
 class SportifiqPage:
@@ -37,6 +41,15 @@ class SportifiqPage:
         '//a[contains(., "Prekliči rezervacijo")] | '
         '//button[contains(., "Prekliči rezervacijo")]'
     )
+
+    # Booking card on the profile page and venue /members/bookings page
+    _BOOKING_CARD_XPATH = '//li[contains(@class,"col-span-1")]'
+
+    # Slovenian month abbreviations → month number
+    _SLO_MONTHS = {
+        "jan": 1, "feb": 2, "mar": 3, "apr": 4, "maj": 5, "jun": 6,
+        "jul": 7, "avg": 8, "sep": 9, "okt": 10, "nov": 11, "dec": 12,
+    }
 
     _WAIT_TIMEOUT = 15
     _MIN_SLEEP = 1.0
@@ -110,7 +123,7 @@ class SportifiqPage:
         if result == "clicked":
             self._random_sleep()
 
-    def book_slot(self, session_time: str, court: str) -> tuple[bool, str]:
+    def book_slot(self, session_time: str, court: str) -> bool:
         """Attempt to book a single time slot.
 
         Args:
@@ -118,8 +131,7 @@ class SportifiqPage:
             court: Exact court name as shown on the website (e.g. "BALON HC1").
 
         Returns:
-            (success, site_id) — site_id is the Sportifiq numeric booking ID extracted
-            from the post-confirmation redirect URL; empty string on failure.
+            True if the booking was confirmed, False if the slot was unavailable.
         """
         try:
             start_str, end_str = session_time.split("-")
@@ -136,7 +148,7 @@ class SportifiqPage:
             try:
                 link = self._wait.until(EC.element_to_be_clickable((By.XPATH, xpath)))
             except TimeoutException:
-                return False, ""
+                return False
 
             link.click()
             self._random_sleep()
@@ -155,7 +167,7 @@ class SportifiqPage:
                     # 1-hour option not available; go back and report failure
                     self._driver.back()
                     self._wait.until(lambda d: "bookings/new" not in d.current_url)
-                    return False, ""
+                    return False
                 sel.select_by_index(1)
             # else: leave default 0:30h selected
 
@@ -168,24 +180,20 @@ class SportifiqPage:
             # Wait until redirected away from the booking form
             self._wait.until(lambda d: "bookings/new" not in d.current_url)
 
-            # Capture the site booking ID from the redirect URL before navigating away.
-            # The URL is typically "{base}/members/bookings/{numeric_id}".
-            site_id = self._extract_booking_id(self._driver.current_url)
-
             # For multi-session runs: ensure the location page is showing the
             # correct day so the next slot search succeeds.
             self._ensure_correct_day()
-            return True, site_id
+            return True
 
         except (NoSuchElementException, TimeoutException):
-            return False, ""
+            return False
 
     def cancel_booking(self, booking_id: str) -> bool:
         """Navigate to the booking detail page and click the cancel button.
 
         Args:
-            booking_id: Numeric or string ID as it appears in the booking URL
-                        (e.g. from /members/bookings/12345).
+            booking_id: Numeric ID from the Sportifiq booking URL
+                        (e.g. "12345" from /members/bookings/12345).
 
         Returns:
             True if cancellation was confirmed, False if the booking was not
@@ -225,14 +233,120 @@ class SportifiqPage:
 
         return True
 
+    def get_upcoming_bookings(self) -> list[SiteBooking]:
+        """Scrape all upcoming reservations from the user's profile page.
+
+        Navigates to sportifiq.com/user_pages/users/{username} and parses every
+        booking card.  The profile page shows bookings across all venues, making
+        this the single source of truth for the reminder workflow.
+
+        Returns:
+            List of SiteBooking objects for confirmed future reservations,
+            sorted by date then time.  Returns [] if the user has none.
+        """
+        # Extract username from the logged-in navbar profile link
+        username = self._driver.execute_script("""
+            const links = document.querySelectorAll('a[href*="/user_pages/users/"]');
+            for (const l of links) {
+                const m = l.href.match(/\\/user_pages\\/users\\/([^/?#]+)/);
+                if (m) return m[1];
+            }
+            return null;
+        """)
+        if not username:
+            raise RuntimeError("Could not determine logged-in username from navbar.")
+
+        profile_url = f"https://sportifiq.com/user_pages/users/{username}"
+        self._driver.get(profile_url)
+        # Wait for either the booking grid or the "no reservations" message
+        self._wait.until(lambda d: d.find_elements(By.XPATH, self._BOOKING_CARD_XPATH)
+                         or "rezervacij" in d.find_element(By.TAG_NAME, "body").text)
+        self._random_sleep()
+
+        cards = self._driver.find_elements(By.XPATH, self._BOOKING_CARD_XPATH)
+        bookings: list[SiteBooking] = []
+        today = date.today().isoformat()
+
+        for card in cards:
+            try:
+                booking = self._parse_booking_card(card)
+                if booking and booking.date >= today:
+                    bookings.append(booking)
+            except Exception:
+                continue  # Skip malformed cards
+
+        bookings.sort(key=lambda b: (b.date, b.time))
+        return bookings
+
     # --- Private helpers ---
 
-    @staticmethod
-    def _extract_booking_id(url: str) -> str:
-        """Pull the numeric booking ID from a URL like .../members/bookings/12345."""
-        import re
-        m = re.search(r"/members/bookings/(\d+)", url)
-        return m.group(1) if m else ""
+    def _parse_booking_card(self, card) -> Optional[SiteBooking]:
+        """Parse a single booking <li> card element into a SiteBooking."""
+        # Booking detail link → site_id and venue base URL
+        booking_link = card.find_element(By.XPATH, './/a[contains(@href,"/members/bookings/")]')
+        href = booking_link.get_attribute("href") or ""
+        m = re.search(r"/members/bookings/(\d+)", href)
+        if not m:
+            return None
+        site_id = m.group(1)
+
+        # Venue key from subdomain: "tk-cc-koseze.sportifiq.com" → "koseze"
+        subdomain_m = re.match(r"https?://([^.]+)\.sportifiq\.com", href)
+        venue_subdomain = subdomain_m.group(1) if subdomain_m else ""
+        # Use the last segment of the subdomain as the venue key
+        venue_key = venue_subdomain.split("-")[-1] if venue_subdomain else venue_subdomain
+
+        # Venue display name
+        venue_name = card.find_element(By.XPATH, './/h3//a').text.strip()
+
+        # Inner list items: first = court (with sport icon img), second = date + time
+        inner_items = card.find_elements(By.XPATH, './/ul[contains(@class,"text-left")]//li')
+        if len(inner_items) < 2:
+            return None
+
+        court = inner_items[0].text.strip()
+        date_li = inner_items[1]
+        time_str = date_li.find_element(By.XPATH, './/span[contains(@class,"whitespace-nowrap")]').text.strip()
+
+        # Date text is the li text minus the time span text: e.g. "17. apr,\xa019:00 - 20:00" → "17. apr,"
+        raw_date = date_li.text.replace(time_str, "").strip().rstrip(",").strip()
+        iso_date = self._parse_slo_date(raw_date)
+        if not iso_date:
+            return None
+
+        return SiteBooking(
+            site_id=site_id,
+            venue=venue_key,
+            venue_name=venue_name,
+            date=iso_date,
+            time=time_str,
+            court=court,
+        )
+
+    def _parse_slo_date(self, raw: str) -> Optional[str]:
+        """Convert "17. apr" (or "17. apr,") to "YYYY-MM-DD".
+
+        If the resulting date is before today, assumes next year.
+        """
+        # Normalise: strip trailing punctuation, collapse whitespace
+        raw = re.sub(r"[,.\s]+$", "", raw.strip())
+        parts = raw.split()
+        if len(parts) < 2:
+            return None
+        try:
+            day = int(parts[0].rstrip("."))
+        except ValueError:
+            return None
+        month_key = parts[1].lower()[:3]
+        month = self._SLO_MONTHS.get(month_key)
+        if not month:
+            return None
+        today = date.today()
+        year = today.year
+        candidate = date(year, month, day)
+        if candidate < today:
+            candidate = date(year + 1, month, day)
+        return candidate.isoformat()
 
     def _ensure_correct_day(self) -> None:
         """After a redirect, make sure we're on the location page / correct day."""

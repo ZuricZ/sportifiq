@@ -27,17 +27,14 @@ class BookingResult:
     court: str
     time: str
     message: str = ""
-    site_id: str = ""  # Sportifiq booking ID captured from redirect URL
 
 
 @dataclass
-class Reservation:
-    id: str           # uuid4 hex (no dashes)
-    venue: str        # venue key, e.g. "koseze"
-    date: str         # YYYY-MM-DD
-    time: str         # HH:MM-HH:MM
+class SiteBooking:
+    """An upcoming reservation scraped directly from the Sportifiq website."""
+    site_id: str       # Sportifiq numeric booking ID (from /members/bookings/{site_id})
+    venue: str         # venue key derived from the URL subdomain (e.g. "koseze")
+    venue_name: str    # display name as shown on site (e.g. "TKCC - Koseze")
+    date: str          # YYYY-MM-DD
+    time: str          # "HH:MM - HH:MM" (site format, spaces around dash)
     court: str
-    booked_at: str    # ISO 8601 UTC, e.g. "2026-04-12T10:00:00Z"
-    status: str       # "confirmed" | "cancelled"
-    reminder_sent: bool = False
-    site_id: str = ""  # Sportifiq numeric booking ID (from /members/bookings/{site_id})

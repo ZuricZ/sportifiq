@@ -1,15 +1,22 @@
 """Email reminder for upcoming court reservations.
 
-Reads all upcoming reservations from the Gist, finds those due in 2 days that
-haven't had a reminder sent yet, and emails the user with Keep/Cancel links.
-Also includes a full table of ALL future reservations in every email.
+Scrapes upcoming bookings directly from the Sportifiq website (no external
+state store needed).  Finds bookings due in 2 days and emails the user with
+Keep / Cancel links.  The full list of ALL upcoming reservations is included
+in every email.
 
-Required env vars (all optional — script exits cleanly if Gist is unconfigured):
-  GIST_TOKEN, GIST_ID, CANCEL_SECRET, GMAIL_USER, GMAIL_APP_PASSWORD, GH_PAGES_URL
+Required env vars:
+  SPORTIFIQ_PASSWORD   — account password (or use key.key / password.dat)
+  CANCEL_SECRET        — HMAC signing secret for cancel tokens
+  GMAIL_USER           — sender Gmail address
+  GMAIL_APP_PASSWORD   — Gmail App Password
+  GH_PAGES_URL         — base URL of the GitHub Pages cancel app
+                         (e.g. https://ZuricZ.github.io/sportifiq)
 """
 import argparse
 import hashlib
 import hmac
+import json
 import logging
 import os
 import smtplib
@@ -18,9 +25,12 @@ import time
 from datetime import date, timedelta
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from pathlib import Path
 
-from src.gist_manager import GistManager
-from src.models import Reservation
+from src.config_loader import get_password, load_venue_config
+from src.driver import create_driver
+from src.models import SiteBooking
+from src.page import SportifiqPage
 
 logging.basicConfig(
     level=logging.INFO,
@@ -29,64 +39,72 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+_CONFIG_FILE = Path("config.json")
+
 
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Send 2-day-before court booking reminders.")
     parser.add_argument("--user_email", required=True, help="Recipient email address")
+    parser.add_argument("--venue", default=None, type=str.lower,
+                        help="Venue key used for login (default: from config.json)")
     parser.add_argument("--dry_run", action="store_true", default=False,
                         help="Print email body to stdout without sending")
+
+    if _CONFIG_FILE.exists():
+        with open(_CONFIG_FILE, encoding="utf-8") as f:
+            defaults = json.load(f)
+        if "venue" in defaults:
+            parser.set_defaults(venue=defaults["venue"])
+
     return parser.parse_args()
 
 
-def _make_cancel_token(reservation_id: str, secret: str) -> tuple[str, int]:
+def _make_cancel_token(site_id: str, secret: str) -> tuple[str, int]:
     """Return (hex_token, expiry_unix_timestamp) valid for 48 hours."""
     exp = int(time.time()) + 48 * 3600
-    payload = f"{reservation_id}:{exp}"
+    payload = f"{site_id}:{exp}"
     token = hmac.new(secret.encode(), payload.encode(), hashlib.sha256).hexdigest()
     return token, exp
 
 
-def _cancel_url(res: Reservation, secret: str, pages_url: str) -> str:
-    token, exp = _make_cancel_token(res.id, secret)
+def _cancel_url(booking: SiteBooking, secret: str, pages_url: str) -> str:
+    token, exp = _make_cancel_token(booking.site_id, secret)
     base = pages_url.rstrip("/")
-    return f"{base}/?id={res.id}&t={token}&exp={exp}"
+    return f"{base}/?id={booking.site_id}&t={token}&exp={exp}"
 
 
-def _build_upcoming_table(upcoming: list[Reservation]) -> str:
+def _build_upcoming_table(upcoming: list[SiteBooking]) -> str:
     if not upcoming:
         return "<p><em>No upcoming reservations.</em></p>"
     rows = "".join(
-        f"<tr><td>{r.date}</td><td>{r.time}</td><td>{r.court}</td>"
-        f"<td>{r.venue}</td><td>{r.status}</td></tr>"
-        for r in sorted(upcoming, key=lambda r: (r.date, r.time))
+        f"<tr><td>{b.date}</td><td>{b.time}</td><td>{b.court}</td>"
+        f"<td>{b.venue_name}</td></tr>"
+        for b in upcoming
     )
     return (
         "<table border='1' cellpadding='6' cellspacing='0' style='border-collapse:collapse'>"
-        "<thead><tr><th>Date</th><th>Time</th><th>Court</th><th>Venue</th><th>Status</th></tr></thead>"
+        "<thead><tr><th>Date</th><th>Time</th><th>Court</th><th>Venue</th></tr></thead>"
         f"<tbody>{rows}</tbody></table>"
     )
 
 
 def _build_email(
-    reminder_res: Reservation,
-    all_upcoming: list[Reservation],
+    reminder: SiteBooking,
+    all_upcoming: list[SiteBooking],
     cancel_link: str,
 ) -> tuple[str, str]:
     """Return (subject, html_body)."""
-    subject = (
-        f"Reminder: court booking {reminder_res.date} "
-        f"{reminder_res.time} {reminder_res.court}"
-    )
+    subject = f"Reminder: court booking {reminder.date} {reminder.time} {reminder.court}"
     upcoming_table = _build_upcoming_table(all_upcoming)
     html = f"""
 <html><body>
 <p>Hi,</p>
 <p>You have a court booking in <strong>2 days</strong>:</p>
 <ul>
-  <li><strong>Date:</strong> {reminder_res.date}</li>
-  <li><strong>Time:</strong> {reminder_res.time}</li>
-  <li><strong>Court:</strong> {reminder_res.court}</li>
-  <li><strong>Venue:</strong> {reminder_res.venue}</li>
+  <li><strong>Date:</strong> {reminder.date}</li>
+  <li><strong>Time:</strong> {reminder.time}</li>
+  <li><strong>Court:</strong> {reminder.court}</li>
+  <li><strong>Venue:</strong> {reminder.venue_name}</li>
 </ul>
 <p>
   <a href="{cancel_link}"
@@ -95,7 +113,7 @@ def _build_email(
   </a>
   &nbsp;&nbsp;
   <span style="background:#27ae60;color:white;padding:10px 20px;border-radius:4px">
-    Keep it ✓
+    Keep it &#10003;
   </span>
 </p>
 <p>The cancel link expires in 48 hours.</p>
@@ -127,39 +145,47 @@ def _send_email(to_addr: str, subject: str, html_body: str) -> None:
 def main() -> None:
     args = _parse_args()
 
-    gist = GistManager(
-        token=os.environ.get("GIST_TOKEN"),
-        gist_id=os.environ.get("GIST_ID"),
-    )
+    if not args.venue:
+        logger.error("--venue is required (or set 'venue' in config.json).")
+        sys.exit(1)
 
-    all_upcoming = gist.all_upcoming()
+    venue_config = load_venue_config(args.venue)
+    password = get_password()
+
+    with create_driver(headless=True) as driver:
+        page = SportifiqPage(driver)
+        page.login(venue_config.url, args.user_email, password)
+        all_upcoming = page.get_upcoming_bookings()
+
     if not all_upcoming:
         logger.info("No upcoming confirmed reservations — nothing to do.")
         sys.exit(0)
 
     target_date = (date.today() + timedelta(days=2)).isoformat()
-    to_remind = [r for r in all_upcoming if r.date == target_date and not r.reminder_sent]
+    to_remind = [b for b in all_upcoming if b.date == target_date]
 
     if not to_remind:
-        logger.info("No reservations due on %s that need a reminder.", target_date)
+        logger.info("No reservations due on %s.", target_date)
         sys.exit(0)
 
     cancel_secret = os.environ.get("CANCEL_SECRET", "")
     pages_url = os.environ.get("GH_PAGES_URL", "https://example.github.io/sportifiq")
 
-    for res in to_remind:
-        link = _cancel_url(res, cancel_secret, pages_url)
-        subject, html = _build_email(res, all_upcoming, link)
+    for booking in to_remind:
+        link = _cancel_url(booking, cancel_secret, pages_url)
+        subject, html = _build_email(booking, all_upcoming, link)
 
         if args.dry_run:
             logger.info("=== DRY RUN — would send email ===")
             logger.info("Subject: %s", subject)
             logger.info("Cancel URL: %s", link)
+            logger.info("All upcoming (%d):", len(all_upcoming))
+            for b in all_upcoming:
+                logger.info("  %s %s %s @ %s (id=%s)", b.date, b.time, b.court, b.venue_name, b.site_id)
             print(html)
         else:
             _send_email(args.user_email, subject, html)
-            logger.info("Reminder sent for reservation %s (%s %s).", res.id, res.date, res.time)
-            gist.update(res.id, reminder_sent=True)
+            logger.info("Reminder sent for booking %s (%s %s).", booking.site_id, booking.date, booking.time)
 
 
 if __name__ == "__main__":

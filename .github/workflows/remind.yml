@@ -23,8 +23,7 @@ jobs:
       - name: Send reminders
         run: python -m src.reminder --user_email "${{ secrets.SPORTIFIQ_EMAIL }}"
         env:
-          GIST_TOKEN: ${{ secrets.GIST_TOKEN }}
-          GIST_ID: ${{ secrets.GIST_ID }}
+          SPORTIFIQ_PASSWORD: ${{ secrets.SPORTIFIQ_PASSWORD }}
           CANCEL_SECRET: ${{ secrets.CANCEL_SECRET }}
           GMAIL_USER: ${{ secrets.GMAIL_USER }}
           GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}

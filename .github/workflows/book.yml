@@ -18,8 +18,6 @@ jobs:
 
     env:
       SPORTIFIQ_PASSWORD: ${{ secrets.SPORTIFIQ_PASSWORD }}
-      GIST_TOKEN: ${{ secrets.GIST_TOKEN }}
-      GIST_ID: ${{ secrets.GIST_ID }}
 
     steps:
       - uses: actions/checkout@v4
