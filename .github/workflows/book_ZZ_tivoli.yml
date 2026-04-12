@@ -1,0 +1,24 @@
+name: "ZZ: Book Tivoli (Wednesday)"
+
+on:
+  schedule:
+    - cron: '0 6 * * 3'   # Every Wednesday at 06:00 UTC — books 7 days out
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run (log only, no browser)'
+        type: boolean
+        default: false
+
+jobs:
+  book:
+    environment: ZZ
+    uses: ./.github/workflows/_book.yml
+    with:
+      venue: tivoli
+      hour: "18:00"          # TODO: confirm preferred hour
+      num_sessions: 1
+      court_name: "Igrišče 1"
+      backup_court_name: "Igrišče 5"
+      dry_run: ${{ inputs.dry_run || false }}
+    secrets: inherit

@@ -44,18 +44,14 @@ _CONFIG_FILE = Path("config.json")
 
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Send 2-day-before court booking reminders.")
-    parser.add_argument("--user_email", required=True, help="Recipient email address")
-    parser.add_argument("--venue", default=None, type=str.lower,
-                        help="Venue key used for login (default: from config.json)")
+    parser.add_argument("--user_email", required=True, help="Sportifiq login email")
+    parser.add_argument("--notify_email", default=None,
+                        help="Recipient address for reminder emails (defaults to --user_email)")
+    parser.add_argument("--user_key", required=True,
+                        help="User identifier embedded in cancel links (e.g. ZZ)")
+    parser.add_argument("--venue", required=True, type=str.lower, help="Venue key used for login")
     parser.add_argument("--dry_run", action="store_true", default=False,
                         help="Print email body to stdout without sending")
-
-    if _CONFIG_FILE.exists():
-        with open(_CONFIG_FILE, encoding="utf-8") as f:
-            defaults = json.load(f)
-        if "venue" in defaults:
-            parser.set_defaults(venue=defaults["venue"])
-
     return parser.parse_args()
 
 
@@ -67,10 +63,10 @@ def _make_cancel_token(site_id: str, secret: str) -> tuple[str, int]:
     return token, exp
 
 
-def _cancel_url(booking: SiteBooking, secret: str, pages_url: str) -> str:
+def _cancel_url(booking: SiteBooking, secret: str, pages_url: str, user_key: str) -> str:
     token, exp = _make_cancel_token(booking.site_id, secret)
     base = pages_url.rstrip("/")
-    return f"{base}/?id={booking.site_id}&t={token}&exp={exp}"
+    return f"{base}/?id={booking.site_id}&t={token}&exp={exp}&user={user_key}"
 
 
 def _build_upcoming_table(upcoming: list[SiteBooking]) -> str:
@@ -144,10 +140,7 @@ def _send_email(to_addr: str, subject: str, html_body: str) -> None:
 
 def main() -> None:
     args = _parse_args()
-
-    if not args.venue:
-        logger.error("--venue is required (or set 'venue' in config.json).")
-        sys.exit(1)
+    notify_email = args.notify_email or args.user_email
 
     venue_config = load_venue_config(args.venue)
     password = get_password()
@@ -172,7 +165,7 @@ def main() -> None:
     pages_url = os.environ.get("GH_PAGES_URL", "https://example.github.io/sportifiq")
 
     for booking in to_remind:
-        link = _cancel_url(booking, cancel_secret, pages_url)
+        link = _cancel_url(booking, cancel_secret, pages_url, args.user_key)
         subject, html = _build_email(booking, all_upcoming, link)
 
         if args.dry_run:
@@ -184,7 +177,7 @@ def main() -> None:
                 logger.info("  %s %s %s @ %s (id=%s)", b.date, b.time, b.court, b.venue_name, b.site_id)
             print(html)
         else:
-            _send_email(args.user_email, subject, html)
+            _send_email(notify_email, subject, html)
             logger.info("Reminder sent for booking %s (%s %s).", booking.site_id, booking.date, booking.time)
 
 

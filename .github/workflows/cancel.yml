@@ -3,6 +3,9 @@ name: Cancel reservation
 on:
   workflow_dispatch:
     inputs:
+      user:
+        description: 'User key (ZZ, GV, JJ)'
+        required: true
       reservation_id:
         description: 'Sportifiq site booking ID (from cancel email link)'
         required: true
@@ -16,6 +19,8 @@ on:
 jobs:
   cancel:
     runs-on: ubuntu-latest
+
+    environment: ${{ inputs.user }}
 
     env:
       SPORTIFIQ_PASSWORD: ${{ secrets.SPORTIFIQ_PASSWORD }}

@@ -9,6 +9,13 @@ jobs:
   remind:
     runs-on: ubuntu-latest
 
+    strategy:
+      matrix:
+        user: [ZZ, GV, JJ]
+      fail-fast: false
+
+    environment: ${{ matrix.user }}
+
     steps:
       - uses: actions/checkout@v4
 
@@ -20,8 +27,26 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
+      - name: Load user config
+        id: cfg
+        run: |
+          python -c "
+          import yaml, os
+          with open('config/users.yaml') as f:
+              u = yaml.safe_load(f)['users']['${{ matrix.user }}']
+          out = os.environ['GITHUB_OUTPUT']
+          with open(out, 'a') as fh:
+              fh.write(f\"notify_email={u['notify_email']}\n\")
+              fh.write(f\"venue={u['venue']}\n\")
+          "
+
       - name: Send reminders
-        run: python -m src.reminder --user_email "${{ secrets.SPORTIFIQ_EMAIL }}"
+        run: |
+          python -m src.reminder \
+            --user_email "${{ secrets.SPORTIFIQ_EMAIL }}" \
+            --notify_email "${{ steps.cfg.outputs.notify_email }}" \
+            --user_key "${{ matrix.user }}" \
+            --venue "${{ steps.cfg.outputs.venue }}"
         env:
           SPORTIFIQ_PASSWORD: ${{ secrets.SPORTIFIQ_PASSWORD }}
           CANCEL_SECRET: ${{ secrets.CANCEL_SECRET }}

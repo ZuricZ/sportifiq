@@ -2,14 +2,20 @@ venues:
   tivoli:
     name: Tivoli
     url: https://tivoli.sportifiq.com/members/location
-    courts: []
-    backup_courts: []
+    courts:
+      - Igrišče 1
+      - Igrišče 5
+    backup_courts:
+      - Igrišče 5
 
   svoboda:
     name: Svoboda
     url: https://svoboda.sportifiq.com/members/location
-    courts: []
-    backup_courts: []
+    courts:
+      - Igrišče 1
+      - Igrišče 2
+    backup_courts:
+      - Igrišče 2
 
   koseze:
     name: Koseze
