@@ -24,7 +24,7 @@ _KNOWN_CONFIG_KEYS = {"venue", "day", "hour", "num_sessions", "court_name", "bac
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Book a court on Sportifiq.")
     parser.add_argument("--venue", required=True, type=str.lower, help="Venue key (e.g. koseze)")
-    parser.add_argument("--day", required=True, help="Day name as shown on the website (e.g. Čet)")
+    parser.add_argument("--day", required=True, help="ISO date (e.g. 2026-04-17) or Slovenian day abbreviation (e.g. Čet)")
     parser.add_argument("--hour", required=True, help="Start time in HH:MM format")
     parser.add_argument("--num_sessions", required=True, type=int, help="Number of consecutive hourly sessions")
     parser.add_argument("--court_name", required=True, help="Exact court name as shown on the website")

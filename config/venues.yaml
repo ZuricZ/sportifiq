@@ -1,21 +1,21 @@
 venues:
   tivoli:
     name: Tivoli
-    url: https://tivoli.sportifiq.com/sl
+    url: https://tivoli.sportifiq.com/members/location
     courts: []
     backup_courts: []
 
   svoboda:
     name: Svoboda
-    url: https://svoboda.sportifiq.com/sl
+    url: https://svoboda.sportifiq.com/members/location
     courts: []
     backup_courts: []
 
   koseze:
     name: Koseze
-    url: https://tk-cc-koseze.sportifiq.com/sl
+    url: https://tk-cc-koseze.sportifiq.com/members/location
     courts:
-      - HC BALON 1
-      - HC BALON 2
+      - BALON HC1
+      - BALON HC2
     backup_courts:
-      - HC BALON 2
+      - BALON HC2

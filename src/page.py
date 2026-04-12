@@ -1,16 +1,15 @@
 import random
 import time
+from datetime import datetime, timedelta
 
 from selenium.common.exceptions import (
-    ElementNotInteractableException,
     NoSuchElementException,
     TimeoutException,
 )
-from selenium.webdriver import ActionChains
 from selenium.webdriver.common.by import By
 from selenium.webdriver.remote.webdriver import WebDriver
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support.ui import Select, WebDriverWait
 
 
 class SportifiqPage:
@@ -22,70 +21,123 @@ class SportifiqPage:
     """
 
     # --- Selectors ---
-    _LOGIN_BUTTON_ID = "loginButton"
-    _SIGNIN_BUTTON_ID = "signInButton"
-    _USERNAME_INPUT_ID = "user_session_email"
+    _LOGIN_URL = "https://sportifiq.com/user_sessions/new"
+    _EMAIL_INPUT_ID = "user_session_email"
     _PASSWORD_INPUT_ID = "user_session_password"
 
-    _SELECTABLE_XPATH = '//*[@id="selectable"]'
-    # Sportifiq uses two different attribute names for session titles depending on booking state;
-    # the compound XPath matches either in a single DOM query.
-    _SESSION_BUTTON_XPATH = '//*[@title="{time} {court}" or @original-title="{time} {court}"]'
-    _CONFIRM_BOOKING_XPATH = '//*[@id="confirmBookingBottomSend"]'
-    _ACCEPT_BOOKING_XPATH = '//*[@id="bookingDetailsModalBottomSend"]'
-    _CLOSE_NOTICE_XPATH = '//*[@id="flashNoticeCentered"]/div[3]/button'
-    _DAY_LINK_XPATH = '//a[text()="{day}"]'
+    # Available slot: <a href=".../members/bookings/new?..."><div title="H:MM - H:MM+30 Court"></div></a>
+    _SLOT_LINK_XPATH = '//a[.//div[@title="{title}"]]'
+    _DURATION_SELECT_ID = "duration-select"
+    _CONFIRM_BUTTON_XPATH = '//button[contains(., "Potrdi rezervacijo")]'
 
-    _WAIT_TIMEOUT = 10
+    _WAIT_TIMEOUT = 15
     _MIN_SLEEP = 1.0
     _MAX_SLEEP = 3.0
 
     def __init__(self, driver: WebDriver) -> None:
         self._driver = driver
         self._wait = WebDriverWait(driver, self._WAIT_TIMEOUT)
+        self._venue_url: str = ""
+        self._selected_day: str = ""
 
     # --- Public interface ---
 
     def login(self, url: str, email: str, password: str) -> None:
-        self._driver.get(url)
-        # Wait for the login button to be clickable rather than using a fixed sleep
-        self._wait.until(EC.element_to_be_clickable((By.ID, self._LOGIN_BUTTON_ID))).click()
-        self._random_sleep()
-        self._fill_by_id(self._USERNAME_INPUT_ID, email)
+        """Log in on sportifiq.com then navigate to the venue members page."""
+        self._venue_url = url
+        self._driver.get(self._LOGIN_URL)
+        self._wait.until(EC.presence_of_element_located((By.ID, self._EMAIL_INPUT_ID)))
+        self._fill_by_id(self._EMAIL_INPUT_ID, email)
         self._fill_by_id(self._PASSWORD_INPUT_ID, password)
-        self._click_by_id(self._SIGNIN_BUTTON_ID)
+        # Submit via the form containing the email field (avoids ambiguity with
+        # the register / forgot-password forms that share the same page).
+        self._driver.find_element(By.ID, self._EMAIL_INPUT_ID).submit()
+        self._wait.until(lambda d: "user_sessions" not in d.current_url)
+        self._random_sleep()
+        self._driver.get(url)
+        self._wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "div[data-date]")))
 
     def select_day(self, day: str) -> None:
-        xpath = self._DAY_LINK_XPATH.format(day=day)
-        self._wait.until(EC.element_to_be_clickable((By.XPATH, xpath))).click()
+        """Click the day tab on the timetable.
+
+        Accepts either an ISO date ("2026-04-17") or a Slovenian abbreviation
+        that matches the website text ("Čet", "ČET", "Pet", …).  The match is
+        case-insensitive.  If the requested day is already active (today /
+        "DANES") the click is skipped because no data-action is present.
+        """
+        self._selected_day = day
+        target = day.upper()
+        elements = self._driver.find_elements(By.CSS_SELECTOR, "div[data-date]")
+        for el in elements:
+            date_attr = el.get_attribute("data-date") or ""
+            first_line = (el.text.split("\n")[0] or "").upper()
+            if date_attr == day or first_line == target:
+                if el.get_attribute("data-action"):
+                    el.click()
+                    self._random_sleep()
+                return
+        raise ValueError(f"Day '{day}' not found in timetable")
 
     def book_slot(self, session_time: str, court: str) -> bool:
         """Attempt to book a single time slot.
 
         Args:
-            session_time: Formatted as "HH:MM-HH:MM".
-            court: Exact court name as displayed on the website.
+            session_time: "HH:MM-HH:MM" (30-min or 60-min window, e.g. "13:30-14:30").
+            court: Exact court name as shown on the website (e.g. "BALON HC1").
 
         Returns:
             True if the booking was confirmed, False if the slot was unavailable.
         """
         try:
-            selectable = self._wait.until(EC.presence_of_element_located((By.XPATH, self._SELECTABLE_XPATH)))
-            ActionChains(self._driver).move_to_element(selectable).perform()
-            self._random_sleep()
+            start_str, end_str = session_time.split("-")
+            start = datetime.strptime(start_str, "%H:%M")
+            end = datetime.strptime(end_str, "%H:%M")
+            duration_mins = int((end - start).total_seconds() / 60)
 
-            xpath = self._SESSION_BUTTON_XPATH.format(time=session_time, court=court)
+            # The website shows slots in 30-min increments; the link title is
+            # "H:MM - H:MM+30 CourtName" regardless of the booking duration.
+            slot_end = start + timedelta(minutes=30)
+            title = f"{self._fmt(start)} - {self._fmt(slot_end)} {court}"
+            xpath = self._SLOT_LINK_XPATH.format(title=title)
+
             try:
-                session_button = self._wait.until(EC.presence_of_element_located((By.XPATH, xpath)))
+                link = self._wait.until(EC.element_to_be_clickable((By.XPATH, xpath)))
             except TimeoutException:
                 return False
 
-            session_button.click()
+            link.click()
             self._random_sleep()
 
-            self._confirm_booking()
+            # Wait for the booking confirmation page
+            self._wait.until(lambda d: "bookings/new" in d.current_url)
+
+            # Choose duration: 0:30h (index 0, default) or 1:00h (index 1)
+            sel = Select(
+                self._wait.until(
+                    EC.presence_of_element_located((By.ID, self._DURATION_SELECT_ID))
+                )
+            )
+            if duration_mins >= 60:
+                if len(sel.options) < 2:
+                    # 1-hour option not available; go back and report failure
+                    self._driver.back()
+                    self._wait.until(lambda d: "bookings/new" not in d.current_url)
+                    return False
+                sel.select_by_index(1)
+            # else: leave default 0:30h selected
+
             self._random_sleep()
-            self._dismiss_notice()
+            self._wait.until(
+                EC.element_to_be_clickable((By.XPATH, self._CONFIRM_BUTTON_XPATH))
+            ).click()
+            self._random_sleep()
+
+            # Wait until redirected away from the booking form
+            self._wait.until(lambda d: "bookings/new" not in d.current_url)
+
+            # For multi-session runs: ensure the location page is showing the
+            # correct day so the next slot search succeeds.
+            self._ensure_correct_day()
             return True
 
         except (NoSuchElementException, TimeoutException):
@@ -93,24 +145,20 @@ class SportifiqPage:
 
     # --- Private helpers ---
 
-    def _confirm_booking(self) -> None:
-        try:
-            self._driver.find_element(By.XPATH, self._CONFIRM_BOOKING_XPATH).click()
-        except ElementNotInteractableException:
-            try:
-                self._driver.find_element(By.XPATH, self._ACCEPT_BOOKING_XPATH).click()
-            except ElementNotInteractableException:
-                raise NoSuchElementException("Neither confirm nor accept booking button was interactable")
+    def _ensure_correct_day(self) -> None:
+        """After a redirect, make sure we're on the location page / correct day."""
+        if "members/location" not in self._driver.current_url:
+            self._driver.get(self._venue_url)
+            self._wait.until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, "div[data-date]"))
+            )
+        if self._selected_day:
+            self.select_day(self._selected_day)
 
-    def _dismiss_notice(self) -> None:
-        try:
-            self._wait.until(EC.element_to_be_clickable((By.XPATH, self._CLOSE_NOTICE_XPATH))).click()
-        except TimeoutException:
-            pass  # notice is optional
-
-    def _click_by_id(self, element_id: str) -> None:
-        self._driver.find_element(By.ID, element_id).click()
-        self._random_sleep()
+    @staticmethod
+    def _fmt(t: datetime) -> str:
+        """Format time without a leading zero on the hour, matching site display."""
+        return f"{t.hour}:{t.strftime('%M')}"
 
     def _fill_by_id(self, element_id: str, text: str) -> None:
         self._driver.find_element(By.ID, element_id).send_keys(text)
