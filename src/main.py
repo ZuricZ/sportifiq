@@ -1,13 +1,17 @@
 import argparse
 import json
 import logging
+import os
 import sys
+import uuid
+from datetime import datetime, timezone
 from pathlib import Path
 
 from src.booking_service import BookingService
 from src.config_loader import get_password, load_venue_config
 from src.driver import create_driver
-from src.models import BookingRequest
+from src.gist_manager import GistManager
+from src.models import BookingRequest, Reservation
 from src.page import SportifiqPage
 
 logging.basicConfig(
@@ -67,6 +71,23 @@ def main() -> None:
 
     successes = [r for r in results if r.success]
     failures = [r for r in results if not r.success]
+
+    # Persist successful bookings to Gist (no-op if GIST_TOKEN / GIST_ID not set)
+    gist = GistManager(
+        token=os.environ.get("GIST_TOKEN"),
+        gist_id=os.environ.get("GIST_ID"),
+    )
+    booked_at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    for r in successes:
+        gist.add(Reservation(
+            id=uuid.uuid4().hex,
+            venue=args.venue,
+            date=args.day,
+            time=r.time,
+            court=r.court,
+            booked_at=booked_at,
+            status="confirmed",
+        ))
 
     logger.info("Done: %d/%d sessions booked.", len(successes), len(results))
     for r in failures:

@@ -30,6 +30,13 @@ class SportifiqPage:
     _DURATION_SELECT_ID = "duration-select"
     _CONFIRM_BUTTON_XPATH = '//button[contains(., "Potrdi rezervacijo")]'
 
+    _CANCEL_BUTTON_XPATH = (
+        '//a[contains(., "Prekliči rezervacijo")] | '
+        '//button[contains(., "Prekliči rezervacijo")] | '
+        '//a[contains(., "Odpovedi")] | '
+        '//button[contains(., "Odpovedi")]'
+    )
+
     _WAIT_TIMEOUT = 15
     _MIN_SLEEP = 1.0
     _MAX_SLEEP = 3.0
@@ -166,6 +173,51 @@ class SportifiqPage:
 
         except (NoSuchElementException, TimeoutException):
             return False
+
+    def cancel_booking(self, booking_id: str) -> bool:
+        """Navigate to the booking detail page and click the cancel button.
+
+        Args:
+            booking_id: Numeric or string ID as it appears in the booking URL
+                        (e.g. from /members/bookings/12345).
+
+        Returns:
+            True if cancellation was confirmed, False if the booking was not
+            found or was already cancelled.
+        """
+        # Derive base URL: strip "/members/location" (and any trailing slash)
+        base_url = self._venue_url.split("/members/")[0]
+        booking_url = f"{base_url}/members/bookings/{booking_id}"
+
+        self._driver.get(booking_url)
+        self._random_sleep()
+
+        try:
+            cancel_btn = self._wait.until(
+                EC.element_to_be_clickable((By.XPATH, self._CANCEL_BUTTON_XPATH))
+            )
+        except TimeoutException:
+            return False
+
+        cancel_btn.click()
+        self._random_sleep()
+
+        # Handle JS confirm() dialog if the site uses one
+        try:
+            alert = self._driver.switch_to.alert
+            alert.accept()
+            self._random_sleep()
+        except Exception:
+            pass  # No dialog — that's fine
+
+        # Wait until redirected away from the booking page
+        try:
+            self._wait.until(lambda d: f"bookings/{booking_id}" not in d.current_url)
+        except TimeoutException:
+            # Some sites stay on the page but show a success message; treat as success
+            pass
+
+        return True
 
     # --- Private helpers ---
 

@@ -27,3 +27,15 @@ class BookingResult:
     court: str
     time: str
     message: str = ""
+
+
+@dataclass
+class Reservation:
+    id: str           # uuid4 hex (no dashes)
+    venue: str        # venue key, e.g. "koseze"
+    date: str         # YYYY-MM-DD
+    time: str         # HH:MM-HH:MM
+    court: str
+    booked_at: str    # ISO 8601 UTC, e.g. "2026-04-12T10:00:00Z"
+    status: str       # "confirmed" | "cancelled"
+    reminder_sent: bool = False
