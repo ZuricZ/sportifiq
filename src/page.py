@@ -32,7 +32,10 @@ class SportifiqPage:
     # Available slot: <a href=".../members/bookings/new?..."><div title="H:MM - H:MM+30 Court"></div></a>
     _SLOT_LINK_XPATH = '//a[.//div[@title="{title}"]]'
     _DURATION_SELECT_ID = "duration-select"
-    _CONFIRM_BUTTON_XPATH = '//button[contains(., "Potrdi rezervacijo")]'
+    _CONFIRM_BUTTON_XPATH = (
+        '//button[contains(., "Potrdi rezervacijo")] | '
+        '//button[contains(., "Rezerviraj in plačaj s kartico")]'
+    )
 
     # "Izbriši" = Delete (the actual label on the booking detail page)
     _CANCEL_BUTTON_XPATH = (
@@ -139,37 +142,41 @@ class SportifiqPage:
             end = datetime.strptime(end_str, "%H:%M")
             duration_mins = int((end - start).total_seconds() / 60)
 
-            # The website shows slots in 30-min increments; the link title is
-            # "H:MM - H:MM+30 CourtName" regardless of the booking duration.
-            slot_end = start + timedelta(minutes=30)
-            title = f"{self._fmt(start)} - {self._fmt(slot_end)} {court}"
-            xpath = self._SLOT_LINK_XPATH.format(title=title)
+            # Venues differ: Koseze shows 30-min slot titles, Tivoli/Svoboda show
+            # 60-min slot titles. Try 30-min first, fall back to 60-min.
+            link = None
+            for slot_mins in (30, 60):
+                slot_end = start + timedelta(minutes=slot_mins)
+                title = f"{self._fmt(start)} - {self._fmt(slot_end)} {court}"
+                xpath = self._SLOT_LINK_XPATH.format(title=title)
+                try:
+                    link = self._wait.until(EC.element_to_be_clickable((By.XPATH, xpath)))
+                    break
+                except TimeoutException:
+                    continue
 
-            try:
-                link = self._wait.until(EC.element_to_be_clickable((By.XPATH, xpath)))
-            except TimeoutException:
+            if link is None:
                 return False
 
-            link.click()
+            try:
+                link.click()
+            except Exception:
+                self._driver.execute_script("arguments[0].click();", link)
             self._random_sleep()
 
             # Wait for the booking confirmation page
             self._wait.until(lambda d: "bookings/new" in d.current_url)
 
-            # Choose duration: 0:30h (index 0, default) or 1:00h (index 1)
-            sel = Select(
-                self._wait.until(
-                    EC.presence_of_element_located((By.ID, self._DURATION_SELECT_ID))
-                )
-            )
-            if duration_mins >= 60:
-                if len(sel.options) < 2:
-                    # 1-hour option not available; go back and report failure
-                    self._driver.back()
-                    self._wait.until(lambda d: "bookings/new" not in d.current_url)
-                    return False
-                sel.select_by_index(1)
-            # else: leave default 0:30h selected
+            # Choose duration if the dropdown exists.
+            # Some venues have fixed-length slots (1 option) — just proceed with
+            # the default.  Only select index 1 (1-hour) when there are 2+ options.
+            duration_elements = self._driver.find_elements(By.ID, self._DURATION_SELECT_ID)
+            if duration_elements:
+                sel = Select(duration_elements[0])
+                if duration_mins >= 60:
+                    if len(sel.options) >= 2:
+                        sel.select_by_index(1)
+                    # else: single option — slot is already the correct duration
 
             self._random_sleep()
             self._wait.until(

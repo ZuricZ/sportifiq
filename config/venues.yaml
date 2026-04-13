@@ -4,9 +4,9 @@ venues:
     url: https://tivoli.sportifiq.com/members/location
     courts:
       - Igrišče 1
-      - Igrišče 5
+      - Igrišče 2
     backup_courts:
-      - Igrišče 5
+      - Igrišče 2
 
   svoboda:
     name: Svoboda
