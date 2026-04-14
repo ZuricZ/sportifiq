@@ -1,9 +1,8 @@
 """Email reminder for upcoming court reservations.
 
 Scrapes upcoming bookings directly from the Sportifiq website (no external
-state store needed).  Finds bookings due in 2 days and emails the user with
-Keep / Cancel links.  The full list of ALL upcoming reservations is included
-in every email.
+state store needed).  Sends a digest of ALL upcoming reservations, each with
+a Cancel link.
 
 Required env vars:
   SPORTIFIQ_PASSWORD   — account password (or use key.key / password.dat)
@@ -22,12 +21,12 @@ import os
 import smtplib
 import sys
 import time
-from datetime import date, timedelta
+from datetime import date
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from pathlib import Path
 
-from src.config_loader import get_password, load_venue_config
+from src.config_loader import get_password, load_settings, load_venue_config
 from src.driver import create_driver
 from src.models import SiteBooking
 from src.page import SportifiqPage
@@ -66,56 +65,55 @@ def _make_cancel_token(site_id: str, secret: str) -> tuple[str, int]:
 def _cancel_url(booking: SiteBooking, secret: str, pages_url: str, user_key: str) -> str:
     token, exp = _make_cancel_token(booking.site_id, secret)
     base = pages_url.rstrip("/")
-    return f"{base}/?id={booking.site_id}&t={token}&exp={exp}&user={user_key}"
+    return f"{base}/?id={booking.site_id}&t={token}&exp={exp}&user={user_key}&venue={booking.venue}"
 
 
-def _build_upcoming_table(upcoming: list[SiteBooking]) -> str:
+def _build_upcoming_table(upcoming: list[SiteBooking], cancel_links: dict[str, str] | None = None) -> str:
     if not upcoming:
         return "<p><em>No upcoming reservations.</em></p>"
-    rows = "".join(
-        f"<tr><td>{b.date}</td><td>{b.time}</td><td>{b.court}</td>"
-        f"<td>{b.venue_name}</td></tr>"
-        for b in upcoming
-    )
+    today = date.today().isoformat()
+    rows = ""
+    for b in upcoming:
+        days_out = (date.fromisoformat(b.date) - date.fromisoformat(today)).days
+        days_label = f"{days_out}d away" if days_out > 0 else "today"
+        cancel_cell = ""
+        if cancel_links and b.site_id in cancel_links:
+            link = cancel_links[b.site_id]
+            cancel_cell = (
+                f"<td><a href='{link}' style='background:#e74c3c;color:white;padding:5px 12px;"
+                f"text-decoration:none;border-radius:4px;font-size:0.85rem'>Cancel</a></td>"
+            )
+        rows += (
+            f"<tr>"
+            f"<td>{b.date} <small style='color:#888'>({days_label})</small></td>"
+            f"<td>{b.time}</td>"
+            f"<td>{b.court}</td>"
+            f"<td>{b.venue_name}</td>"
+            f"{cancel_cell}"
+            f"</tr>"
+        )
     return (
-        "<table border='1' cellpadding='6' cellspacing='0' style='border-collapse:collapse'>"
-        "<thead><tr><th>Date</th><th>Time</th><th>Court</th><th>Venue</th></tr></thead>"
+        "<table border='1' cellpadding='8' cellspacing='0' style='border-collapse:collapse'>"
+        "<thead style='background:#f0f0f0'>"
+        "<tr><th>Date</th><th>Time</th><th>Court</th><th>Venue</th><th></th></tr>"
+        "</thead>"
         f"<tbody>{rows}</tbody></table>"
     )
 
 
 def _build_email(
-    reminder: SiteBooking,
     all_upcoming: list[SiteBooking],
-    cancel_link: str,
+    cancel_links: dict[str, str],
 ) -> tuple[str, str]:
-    """Return (subject, html_body)."""
-    subject = f"Reminder: court booking {reminder.date} {reminder.time} {reminder.court}"
-    upcoming_table = _build_upcoming_table(all_upcoming)
+    """Return (subject, html_body) — digest of all upcoming bookings."""
+    subject = f"Upcoming court bookings ({len(all_upcoming)})"
+    table = _build_upcoming_table(all_upcoming, cancel_links)
     html = f"""
 <html><body>
 <p>Hi,</p>
-<p>You have a court booking in <strong>2 days</strong>:</p>
-<ul>
-  <li><strong>Date:</strong> {reminder.date}</li>
-  <li><strong>Time:</strong> {reminder.time}</li>
-  <li><strong>Court:</strong> {reminder.court}</li>
-  <li><strong>Venue:</strong> {reminder.venue_name}</li>
-</ul>
-<p>
-  <a href="{cancel_link}"
-     style="background:#e74c3c;color:white;padding:10px 20px;text-decoration:none;border-radius:4px">
-    Cancel this booking
-  </a>
-  &nbsp;&nbsp;
-  <span style="background:#27ae60;color:white;padding:10px 20px;border-radius:4px">
-    Keep it &#10003;
-  </span>
-</p>
-<p>The cancel link expires in 48 hours.</p>
-<hr>
-<h3>All upcoming reservations</h3>
-{upcoming_table}
+<p>Here are your upcoming court bookings:</p>
+{table}
+<p style='color:#888;font-size:0.8rem'>Cancel links expire in 48 hours.</p>
 </body></html>
 """
     return subject, html
@@ -154,31 +152,25 @@ def main() -> None:
         logger.info("No upcoming confirmed reservations — nothing to do.")
         sys.exit(0)
 
-    target_date = (date.today() + timedelta(days=2)).isoformat()
-    to_remind = [b for b in all_upcoming if b.date == target_date]
-
-    if not to_remind:
-        logger.info("No reservations due on %s.", target_date)
-        sys.exit(0)
-
     cancel_secret = os.environ.get("CANCEL_SECRET", "")
-    pages_url = os.environ.get("GH_PAGES_URL", "https://example.github.io/sportifiq")
+    pages_url = os.environ.get("GH_PAGES_URL") or load_settings().get("gh_pages_url", "")
 
-    for booking in to_remind:
-        link = _cancel_url(booking, cancel_secret, pages_url, args.user_key)
-        subject, html = _build_email(booking, all_upcoming, link)
+    cancel_links = {
+        b.site_id: _cancel_url(b, cancel_secret, pages_url, args.user_key)
+        for b in all_upcoming
+    }
+    subject, html = _build_email(all_upcoming, cancel_links)
 
-        if args.dry_run:
-            logger.info("=== DRY RUN — would send email ===")
-            logger.info("Subject: %s", subject)
-            logger.info("Cancel URL: %s", link)
-            logger.info("All upcoming (%d):", len(all_upcoming))
-            for b in all_upcoming:
-                logger.info("  %s %s %s @ %s (id=%s)", b.date, b.time, b.court, b.venue_name, b.site_id)
-            print(html)
-        else:
-            _send_email(notify_email, subject, html)
-            logger.info("Reminder sent for booking %s (%s %s).", booking.site_id, booking.date, booking.time)
+    if args.dry_run:
+        logger.info("=== DRY RUN — would send email ===")
+        logger.info("Subject: %s", subject)
+        for b in all_upcoming:
+            logger.info("  %s %s %s @ %s (id=%s) cancel=%s",
+                        b.date, b.time, b.court, b.venue_name, b.site_id, cancel_links[b.site_id])
+        print(html)
+    else:
+        _send_email(notify_email, subject, html)
+        logger.info("Digest sent — %d upcoming booking(s).", len(all_upcoming))
 
 
 if __name__ == "__main__":

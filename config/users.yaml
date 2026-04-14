@@ -1,24 +1,40 @@
+settings:
+  gh_pages_url: https://zuricz.github.io/sportifiq-public
+
 users:
   ZZ:
     notify_email: zan.zuric@gmail.com
-    venue: koseze
-    hour: "13:00"
-    num_sessions: 1
-    court: BALON HC1
-    backup_court: BALON HC2
+    schedules:
+      - venue: koseze
+        day: monday
+        hour: "13:00"
+        court: BALON HC1
+        backup_court: BALON HC2
+      - venue: tivoli
+        day: wednesday
+        hour: "18:00"
+        court: "Igrišče 1"
+        backup_court: "Igrišče 2"
+      - venue: svoboda
+        day: thursday
+        hour: "18:00"
+        court: "Igrišče 1"
+        backup_court: "Igrišče 2"
 
   GV:
     notify_email: placeholder_gv@example.com
-    venue: koseze
-    hour: "13:00"
-    num_sessions: 1
-    court: BALON HC1
-    backup_court: BALON HC2
+    schedules:
+      - venue: koseze
+        day: monday
+        hour: "13:00"
+        court: BALON HC1
+        backup_court: BALON HC2
 
   JJ:
     notify_email: placeholder_jj@example.com
-    venue: koseze
-    hour: "13:00"
-    num_sessions: 1
-    court: BALON HC1
-    backup_court: BALON HC2
+    schedules:
+      - venue: koseze
+        day: monday
+        hour: "13:00"
+        court: BALON HC1
+        backup_court: BALON HC2

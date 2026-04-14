@@ -63,11 +63,12 @@
   const token  = params.get("t");
   const exp    = parseInt(params.get("exp") || "0", 10);
   const user   = params.get("user");
+  const venue  = params.get("venue");
 
   const app = document.getElementById("app");
 
   function render() {
-    if (!siteId || !token || !exp || !user) {
+    if (!siteId || !token || !exp || !user || !venue) {
       app.innerHTML = "<p class='expired'>Invalid link — missing parameters.</p>";
       return;
     }
@@ -135,6 +136,7 @@
             ref: BRANCH,
             inputs: {
               user: user,
+              venue: venue,
               reservation_id: siteId,
               token: token,
               exp: String(exp),

@@ -16,6 +16,31 @@ def _load_venues_data() -> dict:
         return yaml.safe_load(f)
 
 
+def load_settings() -> dict:
+    """Return the top-level settings block from users.yaml (gh_pages_url etc.)."""
+    _USERS_FILE = Path(__file__).parent.parent / "config" / "users.yaml"
+    with open(_USERS_FILE, encoding="utf-8") as f:
+        data = yaml.safe_load(f)
+    return data.get("settings", {})
+
+
+def load_user_schedule(user_key: str, venue: str, day: str) -> dict:
+    """Return the schedule entry matching user+venue+day.
+
+    Raises ValueError if the combination is not found in users.yaml.
+    """
+    _USERS_FILE = Path(__file__).parent.parent / "config" / "users.yaml"
+    with open(_USERS_FILE, encoding="utf-8") as f:
+        data = yaml.safe_load(f)
+    user = data.get("users", {}).get(user_key)
+    if not user:
+        raise ValueError(f"Unknown user '{user_key}'.")
+    for sched in user.get("schedules", []):
+        if sched.get("venue", "").lower() == venue.lower() and sched.get("day", "").lower() == day.lower():
+            return sched
+    raise ValueError(f"No schedule found for user={user_key}, venue={venue}, day={day}.")
+
+
 def load_venue_config(venue_name: str) -> VenueConfig:
     data = _load_venues_data()
     venues: dict = data.get("venues", {})

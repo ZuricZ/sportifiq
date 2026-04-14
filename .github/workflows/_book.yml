@@ -9,23 +9,34 @@ on:
       venue:
         required: true
         type: string
+      # --- config-driven path: provide user + day, everything else is read from users.yaml ---
+      user:
+        type: string
+        default: ''
+      day:
+        description: 'Day of week matching a schedule entry (e.g. monday, wednesday)'
+        type: string
+        default: ''
+      # --- explicit path: provide hour/court directly (ad-hoc / book_manual.yml) ---
       hour:
-        required: true
         type: string
-      num_sessions:
-        type: number
-        default: 1
+        default: ''
       court_name:
-        required: true
         type: string
+        default: ''
       backup_court_name:
+        type: string
+        default: ''
+      # --- shared optional inputs ---
+      target_date:
+        description: 'ISO date (YYYY-MM-DD) — overrides days_ahead when set'
         type: string
         default: ''
       days_ahead:
         type: number
         default: 7
       execution_time:
-        description: 'Sleep until this server time before booking (HH:MM Europe/Berlin, e.g. 07:00)'
+        description: 'Sleep until this server time before booking (HH:MM Europe/Berlin)'
         type: string
         default: ''
       dry_run:
@@ -51,14 +62,47 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
+      - name: Resolve booking params
+        id: params
+        run: |
+          if [ -n "${{ inputs.user }}" ] && [ -n "${{ inputs.day }}" ]; then
+            python -c "
+          import yaml, os
+          with open('config/users.yaml', encoding='utf-8') as f:
+              data = yaml.safe_load(f)
+          user = data['users']['${{ inputs.user }}']
+          match = next(
+              (s for s in user['schedules']
+               if s['venue'].lower() == '${{ inputs.venue }}'.lower()
+               and s['day'].lower() == '${{ inputs.day }}'.lower()),
+              None
+          )
+          if not match:
+              raise SystemExit('No schedule for user=${{ inputs.user }} venue=${{ inputs.venue }} day=${{ inputs.day }}')
+          out = os.environ['GITHUB_OUTPUT']
+          with open(out, 'a') as fh:
+              fh.write(f\"hour={match['hour']}\n\")
+              fh.write(f\"court={match['court']}\n\")
+              fh.write(f\"backup={match.get('backup_court', '')}\n\")
+          "
+          else
+            echo "hour=${{ inputs.hour }}" >> "$GITHUB_OUTPUT"
+            echo "court=${{ inputs.court_name }}" >> "$GITHUB_OUTPUT"
+            echo "backup=${{ inputs.backup_court_name }}" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Compute target date
         id: date
         run: |
-          TARGET=$(python -c "
+          if [ -n "${{ inputs.target_date }}" ]; then
+            echo "target=${{ inputs.target_date }}" >> "$GITHUB_OUTPUT"
+          else
+            TARGET=$(python -c "
           from datetime import date, timedelta
           print((date.today() + timedelta(days=${{ inputs.days_ahead }})).isoformat())
           ")
-          echo "target=$TARGET" >> "$GITHUB_OUTPUT"
+            echo "target=$TARGET" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Book court
         run: |
@@ -66,10 +110,10 @@ jobs:
           python -m src.main \
             --venue "${{ inputs.venue }}" \
             --day "${{ steps.date.outputs.target }}" \
-            --hour "${{ inputs.hour }}" \
-            --num_sessions "${{ inputs.num_sessions }}" \
-            --court_name "${{ inputs.court_name }}" \
-            --backup_court_name "${{ inputs.backup_court_name }}" \
+            --hour "${{ steps.params.outputs.hour }}" \
+            --num_sessions 1 \
+            --court_name "${{ steps.params.outputs.court }}" \
+            --backup_court_name "${{ steps.params.outputs.backup }}" \
             --user_email "${{ secrets.SPORTIFIQ_EMAIL }}" \
             ${EXEC_TIME:+--execution_time "$EXEC_TIME"}
         env:

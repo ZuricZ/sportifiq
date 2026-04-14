@@ -131,27 +131,30 @@ class TestBuildUpcomingTable:
 # ---------------------------------------------------------------------------
 
 class TestBuildEmail:
-    def test_subject_contains_date_time_court(self):
-        url = "https://example.github.io/sportifiq/?id=111&t=abc&exp=999"
-        subject, _ = _build_email(BOOKING, [BOOKING], url)
-        assert "2026-04-14" in subject
-        assert "19:00 - 20:00" in subject
-        assert "BALON HC1" in subject
+    def test_subject_contains_booking_count(self):
+        cancel_links = {BOOKING.site_id: "https://example.github.io/sportifiq/?id=11300768&t=abc&exp=999&user=ZZ&venue=koseze"}
+        subject, _ = _build_email([BOOKING], cancel_links)
+        assert "1" in subject
 
     def test_body_contains_cancel_link(self):
-        url = "https://example.github.io/sportifiq/?id=111&t=abc&exp=999"
-        _, html = _build_email(BOOKING, [BOOKING], url)
+        url = "https://example.github.io/sportifiq/?id=11300768&t=abc&exp=999&user=ZZ&venue=koseze"
+        cancel_links = {BOOKING.site_id: url}
+        _, html = _build_email([BOOKING], cancel_links)
         assert url in html
 
     def test_body_contains_booking_details(self):
-        url = "https://example.github.io/sportifiq/?id=111&t=abc&exp=999"
-        _, html = _build_email(BOOKING, [BOOKING], url)
+        cancel_links = {BOOKING.site_id: "https://example.github.io/sportifiq/?id=11300768&t=abc&exp=999&user=ZZ&venue=koseze"}
+        _, html = _build_email([BOOKING], cancel_links)
         assert "2026-04-14" in html
         assert "19:00 - 20:00" in html
         assert "BALON HC1" in html
         assert "TKCC - Koseze" in html
 
-    def test_body_contains_all_upcoming_table(self):
-        url = "https://example.github.io/sportifiq/?id=111&t=abc&exp=999"
-        _, html = _build_email(BOOKING, [BOOKING, BOOKING_2], url)
-        assert "2026-04-21" in html  # second booking shows in the table
+    def test_body_contains_all_upcoming_bookings(self):
+        cancel_links = {
+            BOOKING.site_id: "https://example.github.io/sportifiq/?id=11300768&t=abc&exp=999&user=ZZ&venue=koseze",
+            BOOKING_2.site_id: "https://example.github.io/sportifiq/?id=11300769&t=abc&exp=999&user=ZZ&venue=koseze",
+        }
+        _, html = _build_email([BOOKING, BOOKING_2], cancel_links)
+        assert "2026-04-14" in html
+        assert "2026-04-21" in html

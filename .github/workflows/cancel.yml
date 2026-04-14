@@ -6,6 +6,9 @@ on:
       user:
         description: 'User key (ZZ, GV, JJ)'
         required: true
+      venue:
+        description: 'Venue key (koseze, tivoli, svoboda)'
+        required: true
       reservation_id:
         description: 'Sportifiq site booking ID (from cancel email link)'
         required: true
@@ -57,6 +60,6 @@ jobs:
       - name: Cancel booking
         run: |
           python -m src.cancel \
-            --venue "${{ vars.VENUE }}" \
+            --venue "${{ inputs.venue }}" \
             --site_id "${{ inputs.reservation_id }}" \
             --user_email "${{ secrets.SPORTIFIQ_EMAIL }}"

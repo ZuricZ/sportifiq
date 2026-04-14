@@ -52,4 +52,3 @@ jobs:
           CANCEL_SECRET: ${{ secrets.CANCEL_SECRET }}
           GMAIL_USER: ${{ secrets.GMAIL_USER }}
           GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
-          GH_PAGES_URL: ${{ vars.GH_PAGES_URL }}

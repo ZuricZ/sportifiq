@@ -15,10 +15,8 @@ jobs:
     uses: ./.github/workflows/_book.yml
     with:
       environment: ZZ
+      user: ZZ
       venue: tivoli
-      hour: "18:00"          # TODO: confirm preferred hour
-      num_sessions: 1
-      court_name: "Igrišče 1"
-      backup_court_name: "Igrišče 2"
+      day: wednesday
       dry_run: ${{ inputs.dry_run || false }}
     secrets: inherit

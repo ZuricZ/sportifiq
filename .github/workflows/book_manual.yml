@@ -1,0 +1,40 @@
+name: "Book court (manual / ad-hoc)"
+
+on:
+  workflow_dispatch:
+    inputs:
+      user:
+        description: 'User key (ZZ, GV, JJ)'
+        required: true
+      venue:
+        description: 'Venue key (koseze, tivoli, svoboda)'
+        required: true
+      date:
+        description: 'Date to book (YYYY-MM-DD)'
+        required: true
+      hour:
+        description: 'Start time (HH:MM)'
+        required: true
+      court_name:
+        description: 'Court name (e.g. BALON HC1, Igrišče 1)'
+        required: true
+      backup_court_name:
+        description: 'Backup court (optional)'
+        default: ''
+      dry_run:
+        description: 'Dry run (log only, no browser)'
+        type: boolean
+        default: false
+
+jobs:
+  book:
+    uses: ./.github/workflows/_book.yml
+    with:
+      environment: ${{ inputs.user }}
+      venue: ${{ inputs.venue }}
+      target_date: ${{ inputs.date }}
+      hour: ${{ inputs.hour }}
+      court_name: ${{ inputs.court_name }}
+      backup_court_name: ${{ inputs.backup_court_name }}
+      dry_run: ${{ inputs.dry_run || false }}
+    secrets: inherit
