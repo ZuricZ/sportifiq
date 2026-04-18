@@ -135,13 +135,11 @@ All imports across tests update from `src.x` → `src.libs.x`.
 
 ## GitHub Actions
 
-Workflow `python -m` invocations update:
-
-| Before | After |
-|--------|-------|
-| `python -m src.main` | `python -m src.book` |
-| `python -m src.cancel` | `python -m src.cancel` (unchanged) |
-| `python -m src.reminder` | `python -m src.remind` |
+| File | Line | Before | After |
+|------|------|--------|-------|
+| `.github/workflows/_book.yml` | 110 | `python -m src.main` | `python -m src.book` |
+| `.github/workflows/cancel.yml` | 62 | `python -m src.cancel` | unchanged |
+| `.github/workflows/remind.yml` | 45 | `python -m src.reminder` | `python -m src.remind` |
 
 ---
 
