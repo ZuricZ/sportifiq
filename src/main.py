@@ -1,9 +1,7 @@
 import argparse
-import json
 import logging
 import sys
 import time
-import warnings
 from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
@@ -13,14 +11,11 @@ import requests
 from src.booking_service import BookingService
 from src.config_loader import get_password, load_venue_config
 from src.driver import create_driver
+from src.log import setup
 from src.models import BookingRequest
 from src.page import SportifiqPage
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s %(levelname)s %(name)s: %(message)s",
-    datefmt="%Y-%m-%dT%H:%M:%S",
-)
+setup()
 logger = logging.getLogger(__name__)
 
 _CONFIG_FILE = Path("config.json")
@@ -47,7 +42,7 @@ def _sleep_until_server_time(target_time_str: str) -> None:
 
     sleep_secs = (target - server_time).total_seconds()
     if sleep_secs <= 0:
-        warnings.warn(f"execution_time {target_time_str} is already past (server: {server_time:%H:%M:%S}). Proceeding immediately.")
+        logger.warning("execution_time %s is already past (server: %s). Proceeding immediately.", target_time_str, server_time.strftime("%H:%M:%S"))
         return
 
     sleep_secs = min(sleep_secs, _FAILSAFE_SECONDS)
@@ -103,10 +98,9 @@ def main() -> None:
         service = BookingService(page)
         results = service.run(request)
 
-    successes = [r for r in results if r.success]
     failures = [r for r in results if not r.success]
 
-    logger.info("Done: %d/%d sessions booked.", len(successes), len(results))
+    logger.info("Done: %d/%d sessions booked.", len(results) - len(failures), len(results))
     for r in failures:
         logger.error("Failed: %s at %s — %s", r.court, r.time, r.message)
 

@@ -4,13 +4,10 @@ import sys
 
 from src.config_loader import get_password, load_venue_config
 from src.driver import create_driver
+from src.log import setup
 from src.page import SportifiqPage
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s %(levelname)s %(name)s: %(message)s",
-    datefmt="%Y-%m-%dT%H:%M:%S",
-)
+setup()
 logger = logging.getLogger(__name__)
 
 

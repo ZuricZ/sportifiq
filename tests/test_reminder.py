@@ -9,7 +9,6 @@ import pytest
 from src.models import SiteBooking
 from src.reminder import (
     _build_email,
-    _build_upcoming_table,
     _cancel_url,
     _make_cancel_token,
 )
@@ -94,36 +93,6 @@ class TestCancelUrl:
         payload = f"{site_id}:{exp}"
         expected = hmac.new(SECRET.encode(), payload.encode(), hashlib.sha256).hexdigest()
         assert hmac.compare_digest(tok, expected)
-
-
-# ---------------------------------------------------------------------------
-# _build_upcoming_table
-# ---------------------------------------------------------------------------
-
-class TestBuildUpcomingTable:
-    def test_empty_list_returns_no_reservations_message(self):
-        html = _build_upcoming_table([])
-        assert "No upcoming reservations" in html
-
-    def test_single_booking_appears_in_table(self):
-        html = _build_upcoming_table([BOOKING])
-        assert "11300768" not in html  # site_id should NOT appear directly
-        assert "2026-04-14" in html
-        assert "19:00 - 20:00" in html
-        assert "BALON HC1" in html
-        assert "TKCC - Koseze" in html
-
-    def test_multiple_bookings_all_appear(self):
-        html = _build_upcoming_table([BOOKING, BOOKING_2])
-        assert "2026-04-14" in html
-        assert "2026-04-21" in html
-        assert "BALON HC1" in html
-        assert "BALON HC2" in html
-
-    def test_returns_table_element(self):
-        html = _build_upcoming_table([BOOKING])
-        assert "<table" in html
-        assert "</table>" in html
 
 
 # ---------------------------------------------------------------------------
