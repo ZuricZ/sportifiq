@@ -1,4 +1,4 @@
-from src.models import BookingResult, SiteBooking, VenueConfig, BookingRequest
+from src.libs.models import BookingResult, SiteBooking, VenueConfig, BookingRequest
 
 
 def test_booking_result_defaults():
