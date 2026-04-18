@@ -42,7 +42,7 @@ jobs:
 
       - name: Send reminders
         run: |
-          python -m src.reminder \
+          python -m src.remind \
             --user_email "${{ secrets.SPORTIFIQ_EMAIL }}" \
             --notify_email "${{ steps.cfg.outputs.notify_email }}" \
             --user_key "${{ matrix.user }}" \

@@ -107,7 +107,7 @@ jobs:
       - name: Book court
         run: |
           EXEC_TIME="${{ inputs.execution_time }}"
-          python -m src.main \
+          python -m src.book \
             --venue "${{ inputs.venue }}" \
             --day "${{ steps.date.outputs.target }}" \
             --hour "${{ steps.params.outputs.hour }}" \
