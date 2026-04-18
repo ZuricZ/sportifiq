@@ -6,8 +6,8 @@ from unittest.mock import patch
 
 import pytest
 
-from src.models import SiteBooking
-from src.reminder import (
+from src.libs.models import SiteBooking
+from src.remind import (
     _build_email,
     _cancel_url,
     _make_cancel_token,
