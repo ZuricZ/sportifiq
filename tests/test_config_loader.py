@@ -4,7 +4,7 @@ from unittest.mock import patch
 
 import pytest
 
-from src.config_loader import get_password, load_venue_config
+from src.libs.config_loader import get_password, load_venue_config
 
 
 # ---------------------------------------------------------------------------
@@ -51,6 +51,6 @@ class TestGetPassword:
     def test_missing_env_and_missing_files_raises(self):
         env = {k: v for k, v in os.environ.items() if k != "SPORTIFIQ_PASSWORD"}
         with patch.dict(os.environ, env, clear=True):
-            with patch("src.config_loader.Path.read_bytes", side_effect=FileNotFoundError):
+            with patch("src.libs.config_loader.Path.read_bytes", side_effect=FileNotFoundError):
                 with pytest.raises(FileNotFoundError, match="Password not found"):
                     get_password()
