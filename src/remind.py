@@ -113,7 +113,6 @@ def main() -> None:
         for b in all_upcoming:
             logger.info("  %s %s %s @ %s (id=%s) cancel=%s",
                         b.date, b.time, b.court, b.venue_name, b.site_id, cancel_links[b.site_id])
-        print(html)
     else:
         _send_email(notify_email, subject, html)
         logger.info("Digest sent — %d upcoming booking(s).", len(all_upcoming))
