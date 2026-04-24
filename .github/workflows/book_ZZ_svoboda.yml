@@ -2,7 +2,7 @@ name: "ZZ: Book Svoboda (Thursday)"
 
 on:
   schedule:
-    - cron: '0 6 * * 4'   # Every Thursday at 06:00 UTC — books 7 days out
+    - cron: '50 21 * * 4'   # Every Thursday at 23:50 CEST — runner ready before midnight
   workflow_dispatch:
     inputs:
       dry_run:
@@ -18,5 +18,6 @@ jobs:
       user: ZZ
       venue: svoboda
       day: thursday
+      execution_time: "00:00"
       dry_run: ${{ inputs.dry_run || false }}
     secrets: inherit

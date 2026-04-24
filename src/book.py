@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 _CONFIG_FILE = Path("config.json")
 _KNOWN_CONFIG_KEYS = {"venue", "day", "hour", "num_sessions", "court_name", "backup_court_name", "user_email", "debug_mode", "execution_time"}
 _LOGIN_URL = "https://sportifiq.com/user_sessions/new"
-_FAILSAFE_SECONDS = 15 * 60
+_FAILSAFE_SECONDS = 90 * 60
 
 
 def _sleep_until_server_time(target_time_str: str) -> None:
