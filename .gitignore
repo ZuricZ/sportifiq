@@ -1,3 +1,5 @@
 /.claude/
 /docs/
 cancel_secret.txt
+.pytest_cache
+__pycache__/
