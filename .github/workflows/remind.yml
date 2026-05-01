@@ -60,8 +60,11 @@ jobs:
           with open('config/users.yaml') as f:
               u = yaml.safe_load(f)['users']['${{ matrix.user }}']
           out = os.environ['GITHUB_OUTPUT']
+          emails = u.get('notify_emails', [])
+          if isinstance(emails, str):
+              emails = [emails]
           with open(out, 'a') as fh:
-              fh.write(f\"notify_email={u['notify_email']}\n\")
+              fh.write(f\"notify_emails={','.join(emails)}\n\")
               fh.write(f\"venue={u['venue']}\n\")
           "
 
@@ -69,7 +72,7 @@ jobs:
         run: |
           python -m src.remind \
             --user_email "$SPORTIFIQ_EMAIL" \
-            --notify_email "${{ steps.cfg.outputs.notify_email }}" \
+            --notify_emails "${{ steps.cfg.outputs.notify_emails }}" \
             --user_key "${{ matrix.user }}" \
             --venue "${{ steps.cfg.outputs.venue }}"
         env:

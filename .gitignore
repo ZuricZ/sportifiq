@@ -1,3 +1,4 @@
 /.claude/
 /docs/
 cancel_secret.txt
+**/__pycache__/
