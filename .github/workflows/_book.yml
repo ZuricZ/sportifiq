@@ -3,9 +3,6 @@ name: _Book court (reusable)
 on:
   workflow_call:
     inputs:
-      environment:
-        required: true
-        type: string
       venue:
         required: true
         type: string
@@ -46,10 +43,6 @@ on:
 jobs:
   book:
     runs-on: ubuntu-latest
-    environment: ${{ inputs.environment }}
-
-    env:
-      SPORTIFIQ_PASSWORD: ${{ secrets.SPORTIFIQ_PASSWORD }}
 
     steps:
       - uses: actions/checkout@v4
@@ -61,6 +54,27 @@ jobs:
 
       - name: Install dependencies
         run: pip install -r requirements.txt
+
+      - name: Resolve credentials
+        run: |
+          case "${{ inputs.user }}" in
+            ZZ)
+              echo "SPORTIFIQ_EMAIL=${{ secrets.ZZ_SPORTIFIQ_EMAIL }}" >> "$GITHUB_ENV"
+              echo "SPORTIFIQ_PASSWORD=${{ secrets.ZZ_SPORTIFIQ_PASSWORD }}" >> "$GITHUB_ENV"
+              ;;
+            JJ)
+              echo "SPORTIFIQ_EMAIL=${{ secrets.JJ_SPORTIFIQ_EMAIL }}" >> "$GITHUB_ENV"
+              echo "SPORTIFIQ_PASSWORD=${{ secrets.JJ_SPORTIFIQ_PASSWORD }}" >> "$GITHUB_ENV"
+              ;;
+            GV)
+              echo "SPORTIFIQ_EMAIL=${{ secrets.GV_SPORTIFIQ_EMAIL }}" >> "$GITHUB_ENV"
+              echo "SPORTIFIQ_PASSWORD=${{ secrets.GV_SPORTIFIQ_PASSWORD }}" >> "$GITHUB_ENV"
+              ;;
+            *)
+              echo "Unknown user: ${{ inputs.user }}" >&2
+              exit 1
+              ;;
+          esac
 
       - name: Resolve booking params
         id: params
@@ -114,7 +128,7 @@ jobs:
             --num_sessions 1 \
             --court_name "${{ steps.params.outputs.court }}" \
             --backup_court_name "${{ steps.params.outputs.backup }}" \
-            --user_email "${{ secrets.SPORTIFIQ_EMAIL }}" \
+            --user_email "$SPORTIFIQ_EMAIL" \
             ${EXEC_TIME:+--execution_time "$EXEC_TIME"}
         env:
           DRY_RUN: ${{ inputs.dry_run }}

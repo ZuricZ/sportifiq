@@ -14,8 +14,6 @@ jobs:
         user: [ZZ, GV, JJ]
       fail-fast: false
 
-    environment: ${{ matrix.user }}
-
     steps:
       - uses: actions/checkout@v4
 
@@ -27,6 +25,33 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
+      - name: Resolve credentials
+        run: |
+          case "${{ matrix.user }}" in
+            ZZ)
+              echo "SPORTIFIQ_EMAIL=${{ secrets.ZZ_SPORTIFIQ_EMAIL }}" >> "$GITHUB_ENV"
+              echo "SPORTIFIQ_PASSWORD=${{ secrets.ZZ_SPORTIFIQ_PASSWORD }}" >> "$GITHUB_ENV"
+              echo "GMAIL_USER=${{ secrets.ZZ_GMAIL_USER }}" >> "$GITHUB_ENV"
+              echo "GMAIL_APP_PASSWORD=${{ secrets.ZZ_GMAIL_APP_PASSWORD }}" >> "$GITHUB_ENV"
+              ;;
+            JJ)
+              echo "SPORTIFIQ_EMAIL=${{ secrets.JJ_SPORTIFIQ_EMAIL }}" >> "$GITHUB_ENV"
+              echo "SPORTIFIQ_PASSWORD=${{ secrets.JJ_SPORTIFIQ_PASSWORD }}" >> "$GITHUB_ENV"
+              echo "GMAIL_USER=${{ secrets.JJ_GMAIL_USER }}" >> "$GITHUB_ENV"
+              echo "GMAIL_APP_PASSWORD=${{ secrets.JJ_GMAIL_APP_PASSWORD }}" >> "$GITHUB_ENV"
+              ;;
+            GV)
+              echo "SPORTIFIQ_EMAIL=${{ secrets.GV_SPORTIFIQ_EMAIL }}" >> "$GITHUB_ENV"
+              echo "SPORTIFIQ_PASSWORD=${{ secrets.GV_SPORTIFIQ_PASSWORD }}" >> "$GITHUB_ENV"
+              echo "GMAIL_USER=${{ secrets.GV_GMAIL_USER }}" >> "$GITHUB_ENV"
+              echo "GMAIL_APP_PASSWORD=${{ secrets.GV_GMAIL_APP_PASSWORD }}" >> "$GITHUB_ENV"
+              ;;
+            *)
+              echo "Unknown user: ${{ matrix.user }}" >&2
+              exit 1
+              ;;
+          esac
+
       - name: Load user config
         id: cfg
         run: |
@@ -35,20 +60,20 @@ jobs:
           with open('config/users.yaml') as f:
               u = yaml.safe_load(f)['users']['${{ matrix.user }}']
           out = os.environ['GITHUB_OUTPUT']
+          emails = u.get('notify_emails', [])
+          if isinstance(emails, str):
+              emails = [emails]
           with open(out, 'a') as fh:
-              fh.write(f\"notify_email={u['notify_email']}\n\")
+              fh.write(f\"notify_emails={','.join(emails)}\n\")
               fh.write(f\"venue={u['venue']}\n\")
           "
 
       - name: Send reminders
         run: |
           python -m src.remind \
-            --user_email "${{ secrets.SPORTIFIQ_EMAIL }}" \
-            --notify_email "${{ steps.cfg.outputs.notify_email }}" \
+            --user_email "$SPORTIFIQ_EMAIL" \
+            --notify_emails "${{ steps.cfg.outputs.notify_emails }}" \
             --user_key "${{ matrix.user }}" \
             --venue "${{ steps.cfg.outputs.venue }}"
         env:
-          SPORTIFIQ_PASSWORD: ${{ secrets.SPORTIFIQ_PASSWORD }}
           CANCEL_SECRET: ${{ secrets.CANCEL_SECRET }}
-          GMAIL_USER: ${{ secrets.GMAIL_USER }}
-          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}

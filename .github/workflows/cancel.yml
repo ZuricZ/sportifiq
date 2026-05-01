@@ -23,10 +23,7 @@ jobs:
   cancel:
     runs-on: ubuntu-latest
 
-    environment: ${{ inputs.user }}
-
     env:
-      SPORTIFIQ_PASSWORD: ${{ secrets.SPORTIFIQ_PASSWORD }}
       CANCEL_SECRET: ${{ secrets.CANCEL_SECRET }}
 
     steps:
@@ -39,6 +36,27 @@ jobs:
 
       - name: Install dependencies
         run: pip install -r requirements.txt
+
+      - name: Resolve credentials
+        run: |
+          case "${{ inputs.user }}" in
+            ZZ)
+              echo "SPORTIFIQ_EMAIL=${{ secrets.ZZ_SPORTIFIQ_EMAIL }}" >> "$GITHUB_ENV"
+              echo "SPORTIFIQ_PASSWORD=${{ secrets.ZZ_SPORTIFIQ_PASSWORD }}" >> "$GITHUB_ENV"
+              ;;
+            JJ)
+              echo "SPORTIFIQ_EMAIL=${{ secrets.JJ_SPORTIFIQ_EMAIL }}" >> "$GITHUB_ENV"
+              echo "SPORTIFIQ_PASSWORD=${{ secrets.JJ_SPORTIFIQ_PASSWORD }}" >> "$GITHUB_ENV"
+              ;;
+            GV)
+              echo "SPORTIFIQ_EMAIL=${{ secrets.GV_SPORTIFIQ_EMAIL }}" >> "$GITHUB_ENV"
+              echo "SPORTIFIQ_PASSWORD=${{ secrets.GV_SPORTIFIQ_PASSWORD }}" >> "$GITHUB_ENV"
+              ;;
+            *)
+              echo "Unknown user: ${{ inputs.user }}" >&2
+              exit 1
+              ;;
+          esac
 
       - name: Validate HMAC token
         run: |
@@ -62,4 +80,4 @@ jobs:
           python -m src.cancel \
             --venue "${{ inputs.venue }}" \
             --site_id "${{ inputs.reservation_id }}" \
-            --user_email "${{ secrets.SPORTIFIQ_EMAIL }}"
+            --user_email "$SPORTIFIQ_EMAIL"
