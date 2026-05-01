@@ -3,9 +3,6 @@ name: _Book court (reusable)
 on:
   workflow_call:
     inputs:
-      environment:
-        required: true
-        type: string
       venue:
         required: true
         type: string
@@ -46,8 +43,6 @@ on:
 jobs:
   book:
     runs-on: ubuntu-latest
-    environment: ${{ inputs.environment }}
-
     env:
       SPORTIFIQ_PASSWORD: ${{ secrets.SPORTIFIQ_PASSWORD }}
 

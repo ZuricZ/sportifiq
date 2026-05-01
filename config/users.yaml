@@ -3,7 +3,8 @@ settings:
 
 users:
   ZZ:
-    notify_email: zan.zuric@gmail.com
+    notify_emails:
+      - zan.zuric@gmail.com
     schedules:
       - venue: koseze
         day: monday
@@ -22,7 +23,8 @@ users:
         backup_court: "Igrišče 2"
 
   GV:
-    notify_email: placeholder_gv@example.com
+    notify_emails:
+      - placeholder_gv@example.com
     schedules:
       - venue: koseze
         day: monday
@@ -31,7 +33,8 @@ users:
         backup_court: BALON HC2
 
   JJ:
-    notify_email: placeholder_jj@example.com
+    notify_emails:
+      - placeholder_jj@example.com
     schedules:
       - venue: koseze
         day: monday

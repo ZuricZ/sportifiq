@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Send upcoming court booking reminders.")
     parser.add_argument("--user_email", required=True)
-    parser.add_argument("--notify_email", default=None)
+    parser.add_argument("--notify_emails", default=None, help="Comma-separated list of email addresses")
     parser.add_argument("--user_key", required=True)
     parser.add_argument("--venue", required=True, type=str.lower)
     parser.add_argument("--dry_run", action="store_true", default=False)
@@ -72,24 +72,27 @@ def _build_email(
     return subject, html
 
 
-def _send_email(to_addr: str, subject: str, html_body: str) -> None:
+def _send_email(recipients: list[str], subject: str, html_body: str) -> None:
     gmail_user = os.environ["GMAIL_USER"]
     app_password = os.environ["GMAIL_APP_PASSWORD"]
     msg = MIMEMultipart("alternative")
     msg["Subject"] = subject
     msg["From"] = gmail_user
-    msg["To"] = to_addr
+    msg["To"] = ", ".join(recipients)
     msg.attach(MIMEText(html_body, "html"))
     with smtplib.SMTP("smtp.gmail.com", 587) as smtp:
         smtp.ehlo()
         smtp.starttls()
         smtp.login(gmail_user, app_password)
-        smtp.sendmail(gmail_user, to_addr, msg.as_string())
+        smtp.sendmail(gmail_user, recipients, msg.as_string())
 
 
 def main() -> None:
     args = _parse_args()
-    notify_email = args.notify_email or args.user_email
+    if args.notify_emails:
+        notify_recipients = [e.strip() for e in args.notify_emails.split(",") if e.strip()]
+    else:
+        notify_recipients = [args.user_email]
 
     with sportifiq_session(args.venue, args.user_email) as page:
         all_upcoming = page.get_upcoming_bookings()
@@ -114,8 +117,9 @@ def main() -> None:
             logger.info("  %s %s %s @ %s (id=%s) cancel=%s",
                         b.date, b.time, b.court, b.venue_name, b.site_id, cancel_links[b.site_id])
     else:
-        _send_email(notify_email, subject, html)
-        logger.info("Digest sent — %d upcoming booking(s).", len(all_upcoming))
+        _send_email(notify_recipients, subject, html)
+        logger.info("Digest sent to %s — %d upcoming booking(s).",
+                     ", ".join(notify_recipients), len(all_upcoming))
 
 
 if __name__ == "__main__":

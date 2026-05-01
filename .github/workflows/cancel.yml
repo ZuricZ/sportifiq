@@ -23,8 +23,6 @@ jobs:
   cancel:
     runs-on: ubuntu-latest
 
-    environment: ${{ inputs.user }}
-
     env:
       SPORTIFIQ_PASSWORD: ${{ secrets.SPORTIFIQ_PASSWORD }}
       CANCEL_SECRET: ${{ secrets.CANCEL_SECRET }}

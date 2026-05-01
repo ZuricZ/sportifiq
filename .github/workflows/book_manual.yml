@@ -30,7 +30,6 @@ jobs:
   book:
     uses: ./.github/workflows/_book.yml
     with:
-      environment: ${{ inputs.user }}
       venue: ${{ inputs.venue }}
       target_date: ${{ inputs.date }}
       hour: ${{ inputs.hour }}
