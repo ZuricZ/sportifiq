@@ -14,7 +14,7 @@ jobs:
   book:
     uses: ./.github/workflows/_book.yml
     with:
-      user: ZZ
+      user: GV
       venue: tivoli
       day: wednesday
       execution_time: "00:00"
