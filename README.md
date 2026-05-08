@@ -67,8 +67,7 @@ Available venues: `tivoli`, `svoboda`, `koseze`. Days are lowercase English (`mo
 
 ### 2. Add your secrets to the repository
 
-Go to **Settings → Secrets and variables → Actions → New repository secret** and create
-these four secrets, replacing `XY` with your user key:
+You need four secrets, replacing `XY` with your user key:
 
 | Secret name | Value |
 |-------------|-------|
@@ -78,6 +77,49 @@ these four secrets, replacing `XY` with your user key:
 | `XY_GMAIL_APP_PASSWORD` | Google Account → Security → 2-Step Verification → App passwords |
 
 `CANCEL_SECRET` is a shared secret already in the repo — you do not need to add it.
+
+**Option A — GitHub web UI**
+
+Go to **Settings → Secrets and variables → Actions → New repository secret** and add each
+one manually.
+
+**Option B — GitHub CLI (faster)**
+
+First, install the GitHub CLI if you don't have it:
+
+```bash
+# macOS
+brew install gh
+
+# Windows (winget)
+winget install --id GitHub.cli -e
+
+# Linux
+sudo apt install gh        # Debian/Ubuntu
+sudo dnf install gh        # Fedora
+```
+
+Then authenticate once:
+
+```bash
+gh auth login
+# Choose: GitHub.com → HTTPS → Login with a web browser
+```
+
+Then set all four secrets in one go (replace values with your own):
+
+```bash
+gh secret set XY_SPORTIFIQ_EMAIL    --body "you@example.com"          -R <owner>/sportifiq
+gh secret set XY_SPORTIFIQ_PASSWORD --body "your-sportifiq-password"  -R <owner>/sportifiq
+gh secret set XY_GMAIL_USER         --body "sender@gmail.com"          -R <owner>/sportifiq
+gh secret set XY_GMAIL_APP_PASSWORD --body "xxxx xxxx xxxx xxxx"       -R <owner>/sportifiq
+```
+
+Verify they were saved:
+
+```bash
+gh secret list -R <owner>/sportifiq
+```
 
 ### 3. Create your booking workflow file(s)
 
