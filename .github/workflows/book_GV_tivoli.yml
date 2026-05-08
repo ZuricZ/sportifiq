@@ -1,4 +1,4 @@
-name: "ZZ: Book Tivoli (Wednesday)"
+name: "GV: Book Tivoli (Wednesday)"
 
 on:
   schedule:
@@ -14,8 +14,7 @@ jobs:
   book:
     uses: ./.github/workflows/_book.yml
     with:
-      environment: GV
-      user: GV
+      user: ZZ
       venue: tivoli
       day: wednesday
       execution_time: "00:00"
