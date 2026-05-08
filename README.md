@@ -11,7 +11,7 @@ Three CLI runners live in `src/`:
 
 | Runner | Entry point | What it does |
 |--------|-------------|--------------|
-| `book.py` | `python -m src.book` | Opens a headless Chrome session, logs in, navigates to the target day, and books the configured court (with backup fallback). |
+| `book.py` | `python -m src.book` | Opens a headless Chrome session, logs in, navigates to the target day, and books the configured court (with backup fallback). Accepts terms/privacy if redirected on first login. |
 | `remind.py` | `python -m src.remind` | Fetches all upcoming confirmed bookings and emails a digest with HMAC-signed cancel links. |
 | `cancel.py` | `python -m src.cancel` | Logs in and cancels a specific booking by site ID. |
 
@@ -51,8 +51,9 @@ sportifiq/
 ```yaml
 users:
   XY:                              # your user key — 2–3 uppercase letters
-    notify_email: you@example.com
-    venue: koseze                  # primary venue for remind workflow
+    notify_emails:
+      - you@example.com            # list — add more addresses to CC others
+    venue: koseze                  # primary venue for the remind workflow
     schedules:
       - venue: koseze              # must match a key in config/venues.yaml
         day: monday
@@ -162,7 +163,7 @@ pip install -r requirements-dev.txt
 # Run all tests (from repo root)
 python -m pytest tests/ -v
 
-# Encrypt your password for local runs (writes key.key and password.dat — gitignored)
+# Encrypt your Sportifiq password for local runs (writes key.key and password.dat — gitignored)
 python -m src.get_pwd
 ```
 
@@ -172,13 +173,31 @@ Run a runner locally:
 # Book a court
 python -m src.book \
   --venue koseze \
-  --day 2026-05-05 \
+  --day 2026-05-14 \
+  --hour 13:00 \
+  --num_sessions 1 \
+  --court_name "BALON HC1" \
+  --backup_court_name "BALON HC2" \
+  --user_email you@example.com
+
+# Dry run — logs params, skips browser entirely
+DRY_RUN=true python -m src.book \
+  --venue koseze \
+  --day 2026-05-14 \
   --hour 13:00 \
   --num_sessions 1 \
   --court_name "BALON HC1" \
   --user_email you@example.com
 
-# Send reminder email (dry run — prints HTML, no email sent)
+# Send reminder email
+GMAIL_USER=sender@gmail.com GMAIL_APP_PASSWORD="xxxx xxxx xxxx xxxx" \
+CANCEL_SECRET=<your-cancel-secret> \
+python -m src.remind \
+  --user_email you@example.com \
+  --user_key XY \
+  --venue koseze
+
+# Send reminder email (dry run — prints details, no email sent)
 python -m src.remind \
   --user_email you@example.com \
   --user_key XY \
