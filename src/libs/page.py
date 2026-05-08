@@ -53,8 +53,8 @@ class SportifiqPage:
 
     # --- Public interface ---
 
-    def login(self, url: str, email: str, password: str) -> None:
-        self._venue_url = url
+    def login(self, url: str | None, email: str, password: str) -> None:
+        self._venue_url = url or ""
         self._driver.get(self._LOGIN_URL)
         self._wait.until(EC.presence_of_element_located((By.ID, self._EMAIL_INPUT_ID)))
         self._fill_by_id(self._EMAIL_INPUT_ID, email)
@@ -62,11 +62,11 @@ class SportifiqPage:
         self._driver.find_element(By.ID, self._EMAIL_INPUT_ID).submit()
         self._wait.until(lambda d: "user_sessions" not in d.current_url)
         self._random_sleep()
-        self._driver.get(url)
         self._maybe_accept_terms()
-        if url not in self._driver.current_url:
-            self._driver.get(url)
-        self._wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "div[data-date]")))
+        if url:
+            if url not in self._driver.current_url:
+                self._driver.get(url)
+            self._wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "div[data-date]")))
 
     def select_day(self, day: str) -> None:
         self._selected_day = day

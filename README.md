@@ -53,7 +53,6 @@ users:
   XY:                              # your user key — 2–3 uppercase letters
     notify_emails:
       - you@example.com            # list — add more addresses to CC others
-    venue: koseze                  # any valid venue — used as landing page after login
     schedules:
       - venue: koseze              # venue to book at (can differ per schedule entry)
         day: monday
@@ -169,9 +168,9 @@ strategy:
 
 # remind.yml — Resolve credentials step
 XY)
-  echo "SPORTIFIQ_EMAIL=${{ secrets.XY_SPORTIFIQ_EMAIL }}" >> "$GITHUB_ENV"
+  echo "SPORTIFIQ_EMAIL=${{ secrets.XY_SPORTIFIQ_EMAIL }}"    >> "$GITHUB_ENV"
   echo "SPORTIFIQ_PASSWORD=${{ secrets.XY_SPORTIFIQ_PASSWORD }}" >> "$GITHUB_ENV"
-  echo "GMAIL_USER=${{ secrets.XY_GMAIL_USER }}" >> "$GITHUB_ENV"
+  echo "GMAIL_USER=${{ secrets.XY_GMAIL_USER }}"              >> "$GITHUB_ENV"
   echo "GMAIL_APP_PASSWORD=${{ secrets.XY_GMAIL_APP_PASSWORD }}" >> "$GITHUB_ENV"
   ;;
 ```
@@ -236,14 +235,12 @@ GMAIL_USER=sender@gmail.com GMAIL_APP_PASSWORD="xxxx xxxx xxxx xxxx" \
 CANCEL_SECRET=<your-cancel-secret> \
 python -m src.remind \
   --user_email you@example.com \
-  --user_key XY \
-  --venue koseze
+  --user_key XY
 
 # Send reminder email (dry run — prints details, no email sent)
 python -m src.remind \
   --user_email you@example.com \
   --user_key XY \
-  --venue koseze \
   --dry_run
 
 # Cancel a booking

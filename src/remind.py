@@ -27,7 +27,6 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--user_email", required=True)
     parser.add_argument("--notify_emails", default=None, help="Comma-separated list of email addresses")
     parser.add_argument("--user_key", required=True)
-    parser.add_argument("--venue", required=True, type=str.lower)
     parser.add_argument("--dry_run", action="store_true", default=False)
     return parser.parse_args()
 
@@ -94,7 +93,7 @@ def main() -> None:
     else:
         notify_recipients = [args.user_email]
 
-    with sportifiq_session(args.venue, args.user_email) as page:
+    with sportifiq_session(None, args.user_email) as page:
         all_upcoming = page.get_upcoming_bookings()
 
     if not all_upcoming:

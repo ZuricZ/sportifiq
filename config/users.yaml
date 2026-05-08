@@ -4,8 +4,7 @@ settings:
 users:
   ZZ:
     notify_emails:
-      - zan.zuric@gmail.com
-    venue: koseze
+      - killerzax1@gmail.com
     schedules:
       - venue: koseze
         day: monday
@@ -26,7 +25,6 @@ users:
   GV:
     notify_emails:
       - placeholder_gv@example.com
-    venue: koseze
     schedules:
       - venue: koseze
         day: monday
@@ -37,7 +35,6 @@ users:
   JJ:
     notify_emails:
       - placeholder_jj@example.com
-    venue: koseze
     schedules:
       - venue: koseze
         day: monday
