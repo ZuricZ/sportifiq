@@ -1,0 +1,23 @@
+name: "ZZ: Book Tivoli (Wednesday)"
+
+on:
+  schedule:
+    - cron: '50 21 * * 3'   # Every Wednesday at 23:50 CEST — runner ready before midnight
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run (log only, no browser)'
+        type: boolean
+        default: false
+
+jobs:
+  book:
+    uses: ./.github/workflows/_book.yml
+    with:
+      environment: GV
+      user: GV
+      venue: tivoli
+      day: wednesday
+      execution_time: "00:00"
+      dry_run: ${{ inputs.dry_run || false }}
+    secrets: inherit

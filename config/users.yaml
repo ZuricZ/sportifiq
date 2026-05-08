@@ -22,13 +22,13 @@ users:
         backup_court: "Igrišče 2"
 
   GV:
-    notify_email: placeholder_gv@example.com
+    notify_email: greg.vudi@gmail.com
     schedules:
-      - venue: koseze
-        day: monday
-        hour: "13:00"
-        court: BALON HC1
-        backup_court: BALON HC2
+      - venue: tivoli
+        day: wednesday
+        hour: "18:00"
+        court: "Igrišče 1"
+        backup_court: "Igrišče 2"
 
   JJ:
     notify_email: placeholder_jj@example.com
