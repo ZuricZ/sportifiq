@@ -27,7 +27,7 @@ users:
     schedules:
       - venue: tivoli
         day: wednesday
-        hour: "18:00"
+        hour: "16:00"
         court: "Igrišče 1"
         backup_court: "Igrišče 2"
 
