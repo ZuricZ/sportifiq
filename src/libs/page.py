@@ -1,8 +1,11 @@
+import logging
 import random
 import re
 import time
 from datetime import date, datetime, timedelta
 from typing import Optional
+
+logger = logging.getLogger(__name__)
 
 from selenium.common.exceptions import (
     NoSuchElementException,
@@ -50,8 +53,8 @@ class SportifiqPage:
 
     # --- Public interface ---
 
-    def login(self, url: str, email: str, password: str) -> None:
-        self._venue_url = url
+    def login(self, url: str | None, email: str, password: str) -> None:
+        self._venue_url = url or ""
         self._driver.get(self._LOGIN_URL)
         self._wait.until(EC.presence_of_element_located((By.ID, self._EMAIL_INPUT_ID)))
         self._fill_by_id(self._EMAIL_INPUT_ID, email)
@@ -59,8 +62,11 @@ class SportifiqPage:
         self._driver.find_element(By.ID, self._EMAIL_INPUT_ID).submit()
         self._wait.until(lambda d: "user_sessions" not in d.current_url)
         self._random_sleep()
-        self._driver.get(url)
-        self._wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "div[data-date]")))
+        self._maybe_accept_terms()
+        if url:
+            if url not in self._driver.current_url:
+                self._driver.get(url)
+            self._wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "div[data-date]")))
 
     def select_day(self, day: str) -> None:
         self._selected_day = day
@@ -241,6 +247,58 @@ class SportifiqPage:
             iso_date,
         )
         self._random_sleep()
+
+    def _maybe_accept_terms(self) -> None:
+        """Handle the Sportifiq terms-acceptance page if redirected there.
+
+        Sportifiq redirects to /user_pages/terms_acceptance when terms have not
+        been accepted. Checks only the mandatory terms/privacy checkbox; the
+        marketing news checkbox must never be checked.
+        """
+        _TERMS_URL_FRAGMENT = "terms_acceptance"
+        _TERMS_CB_ID = "agreed_to_terms_of_service"
+        _NEWS_CB_ID = "agreed_to_marketing"
+        _POPUP_TIMEOUT = 5
+
+        try:
+            WebDriverWait(self._driver, _POPUP_TIMEOUT).until(
+                lambda d: _TERMS_URL_FRAGMENT in d.current_url
+            )
+        except TimeoutException:
+            logger.debug("No terms_acceptance redirect — skipping.")
+            return
+
+        logger.info("Terms acceptance page detected — accepting terms only.")
+
+        # Check terms checkbox
+        try:
+            terms_cb = self._driver.find_element(By.ID, _TERMS_CB_ID)
+            if not terms_cb.is_selected():
+                logger.info("Checking terms checkbox.")
+                terms_cb.click()
+        except NoSuchElementException:
+            logger.warning("Terms checkbox (#%s) not found.", _TERMS_CB_ID)
+
+        # Ensure marketing checkbox is NOT checked
+        try:
+            news_cb = self._driver.find_element(By.ID, _NEWS_CB_ID)
+            if news_cb.is_selected():
+                logger.info("Unchecking marketing checkbox.")
+                news_cb.click()
+        except NoSuchElementException:
+            pass
+
+        # Submit — Nadaljuj is input[type="submit"], not a <button>
+        try:
+            nadaljuj = self._driver.find_element(
+                By.XPATH, '//input[@type="submit" and @value="Nadaljuj"]'
+            )
+            logger.info("Clicking Nadaljuj submit button.")
+            nadaljuj.click()
+            self._wait.until(lambda d: _TERMS_URL_FRAGMENT not in d.current_url)
+            logger.info("Terms accepted — continuing to venue page.")
+        except (NoSuchElementException, TimeoutException) as exc:
+            logger.warning("Could not complete terms acceptance: %s", exc)
 
     def _fill_by_id(self, element_id: str, text: str) -> None:
         self._driver.find_element(By.ID, element_id).send_keys(text)

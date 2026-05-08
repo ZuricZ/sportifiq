@@ -14,7 +14,6 @@ jobs:
   book:
     uses: ./.github/workflows/_book.yml
     with:
-      environment: JJ
       user: JJ
       venue: koseze
       day: monday

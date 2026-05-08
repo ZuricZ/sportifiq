@@ -2,6 +2,7 @@
 import argparse
 import json
 import logging
+import os
 import sys
 import time
 from datetime import datetime
@@ -62,6 +63,13 @@ def _parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = _parse_args()
+
+    if os.environ.get("DRY_RUN", "").lower() in ("true", "1"):
+        logger.info(
+            "DRY RUN — would book: venue=%s day=%s hour=%s court=%s backup=%s user=%s",
+            args.venue, args.day, args.hour, args.court_name, args.backup_court_name, args.user_email,
+        )
+        return
 
     if args.execution_time:
         _sleep_until_server_time(args.execution_time)

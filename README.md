@@ -11,7 +11,7 @@ Three CLI runners live in `src/`:
 
 | Runner | Entry point | What it does |
 |--------|-------------|--------------|
-| `book.py` | `python -m src.book` | Opens a headless Chrome session, logs in, navigates to the target day, and books the configured court (with backup fallback). |
+| `book.py` | `python -m src.book` | Opens a headless Chrome session, logs in, navigates to the target day, and books the configured court (with backup fallback). Accepts terms/privacy if redirected on first login. |
 | `remind.py` | `python -m src.remind` | Fetches all upcoming confirmed bookings and emails a digest with HMAC-signed cancel links. |
 | `cancel.py` | `python -m src.cancel` | Logs in and cancels a specific booking by site ID. |
 
@@ -51,9 +51,10 @@ sportifiq/
 ```yaml
 users:
   XY:                              # your user key — 2–3 uppercase letters
-    notify_email: you@example.com
+    notify_emails:
+      - you@example.com            # list — add more addresses to CC others
     schedules:
-      - venue: koseze              # must match a key in config/venues.yaml
+      - venue: koseze              # venue to book at (can differ per schedule entry)
         day: monday
         hour: "13:00"
         court: BALON HC1
@@ -63,22 +64,63 @@ users:
 Available venues: `tivoli`, `svoboda`, `koseze`. Days are lowercase English (`monday`,
 `wednesday`, etc.). Open a PR with this change.
 
-### 2. Create a GitHub Environment
+### 2. Add your secrets to the repository
 
-Go to **Settings → Environments → New environment** and name it exactly as your user key
-(e.g. `XY`).
+You need four secrets, replacing `XY` with your user key:
 
-### 3. Add secrets to your environment
+| Secret name | Value |
+|-------------|-------|
+| `XY_SPORTIFIQ_EMAIL` | Your Sportifiq login email |
+| `XY_SPORTIFIQ_PASSWORD` | Your Sportifiq login password |
+| `XY_GMAIL_USER` | Gmail address used to send reminder emails |
+| `XY_GMAIL_APP_PASSWORD` | Google Account → Security → 2-Step Verification → App passwords |
 
-| Secret | Where to get it |
-|--------|-----------------|
-| `SPORTIFIQ_EMAIL` | Your Sportifiq login email |
-| `SPORTIFIQ_PASSWORD` | Your Sportifiq login password |
-| `CANCEL_SECRET` | Shared value — get it from another collaborator |
-| `GMAIL_USER` | Gmail address used to send reminder emails |
-| `GMAIL_APP_PASSWORD` | Google Account → Security → 2-Step Verification → App passwords |
+`CANCEL_SECRET` is a shared secret already in the repo — you do not need to add it.
 
-### 4. Create your booking workflow file(s)
+**Option A — GitHub web UI**
+
+Go to **Settings → Secrets and variables → Actions → New repository secret** and add each
+one manually.
+
+**Option B — GitHub CLI (faster)**
+
+First, install the GitHub CLI if you don't have it:
+
+```bash
+# macOS
+brew install gh
+
+# Windows (winget)
+winget install --id GitHub.cli -e
+
+# Linux
+sudo apt install gh        # Debian/Ubuntu
+sudo dnf install gh        # Fedora
+```
+
+Then authenticate once:
+
+```bash
+gh auth login
+# Choose: GitHub.com → HTTPS → Login with a web browser
+```
+
+Then set all four secrets in one go (replace values with your own):
+
+```bash
+gh secret set XY_SPORTIFIQ_EMAIL    --body "you@example.com"          -R <owner>/sportifiq
+gh secret set XY_SPORTIFIQ_PASSWORD --body "your-sportifiq-password"  -R <owner>/sportifiq
+gh secret set XY_GMAIL_USER         --body "sender@gmail.com"          -R <owner>/sportifiq
+gh secret set XY_GMAIL_APP_PASSWORD --body "xxxx xxxx xxxx xxxx"       -R <owner>/sportifiq
+```
+
+Verify they were saved:
+
+```bash
+gh secret list -R <owner>/sportifiq
+```
+
+### 3. Create your booking workflow file(s)
 
 Add one file per scheduled booking under `.github/workflows/`. Use this template:
 
@@ -87,7 +129,7 @@ name: "XY: Book Koseze (Monday)"
 
 on:
   schedule:
-    - cron: '0 6 * * 1'   # Every Monday at 06:00 UTC — books 7 days out
+    - cron: '50 21 * * 1'   # Every Monday at 23:50 CEST — runner ready before midnight
   workflow_dispatch:
     inputs:
       dry_run:
@@ -99,23 +141,57 @@ jobs:
   book:
     uses: ./.github/workflows/_book.yml
     with:
-      environment: XY
       user: XY
       venue: koseze
       day: monday
+      execution_time: "00:00"
       dry_run: ${{ inputs.dry_run || false }}
     secrets: inherit
 ```
 
-Cron day-of-week: `1`=Mon, `2`=Tue, `3`=Wed, `4`=Thu, `5`=Fri. The default books 7 days
-ahead, so schedule the cron to run on the same weekday as the session, one week earlier.
+Cron day-of-week: `1`=Mon, `2`=Tue, `3`=Wed, `4`=Thu, `5`=Fri. The workflow fires at
+23:50 CEST on the same weekday as the session and books 7 days out. The runner sleeps
+until exactly midnight before submitting the booking.
+
 Open a PR with the workflow file(s).
+
+### 4. Add yourself to the reminder and cancel workflows
+
+In `.github/workflows/remind.yml`, add your user key to the matrix and add a case block
+for your credentials inside the "Resolve credentials" step:
+
+```yaml
+# remind.yml — matrix
+strategy:
+  matrix:
+    user: [ZZ, GV, JJ, XY]   # add XY here
+
+# remind.yml — Resolve credentials step
+XY)
+  echo "SPORTIFIQ_EMAIL=${{ secrets.XY_SPORTIFIQ_EMAIL }}"    >> "$GITHUB_ENV"
+  echo "SPORTIFIQ_PASSWORD=${{ secrets.XY_SPORTIFIQ_PASSWORD }}" >> "$GITHUB_ENV"
+  echo "GMAIL_USER=${{ secrets.XY_GMAIL_USER }}"              >> "$GITHUB_ENV"
+  echo "GMAIL_APP_PASSWORD=${{ secrets.XY_GMAIL_APP_PASSWORD }}" >> "$GITHUB_ENV"
+  ;;
+```
+
+In `.github/workflows/cancel.yml` and `.github/workflows/_book.yml`, add the same case
+block (email + password only) inside their "Resolve credentials" steps:
+
+```yaml
+XY)
+  echo "SPORTIFIQ_EMAIL=${{ secrets.XY_SPORTIFIQ_EMAIL }}" >> "$GITHUB_ENV"
+  echo "SPORTIFIQ_PASSWORD=${{ secrets.XY_SPORTIFIQ_PASSWORD }}" >> "$GITHUB_ENV"
+  ;;
+```
+
+Include all three workflow file changes in the same PR as step 3.
 
 ### 5. Verify
 
-After your PR is merged, go to **Actions → Send booking reminders → Run workflow**, select
-your user key, and trigger it. You should receive a reminder email, or see a log line
-saying there are no upcoming bookings.
+After your PR is merged, go to **Actions → Send booking reminders → Run workflow** and
+trigger it manually. You should receive a reminder email, or see a log line saying there
+are no upcoming bookings.
 
 ## Local development
 
@@ -128,7 +204,7 @@ pip install -r requirements-dev.txt
 # Run all tests (from repo root)
 python -m pytest tests/ -v
 
-# Encrypt your password for local runs (writes key.key and password.dat — gitignored)
+# Encrypt your Sportifiq password for local runs (writes key.key and password.dat — gitignored)
 python -m src.get_pwd
 ```
 
@@ -138,17 +214,33 @@ Run a runner locally:
 # Book a court
 python -m src.book \
   --venue koseze \
-  --day 2026-05-05 \
+  --day 2026-05-14 \
+  --hour 13:00 \
+  --num_sessions 1 \
+  --court_name "BALON HC1" \
+  --backup_court_name "BALON HC2" \
+  --user_email you@example.com
+
+# Dry run — logs params, skips browser entirely
+DRY_RUN=true python -m src.book \
+  --venue koseze \
+  --day 2026-05-14 \
   --hour 13:00 \
   --num_sessions 1 \
   --court_name "BALON HC1" \
   --user_email you@example.com
 
-# Send reminder email (dry run — prints HTML, no email sent)
+# Send reminder email
+GMAIL_USER=sender@gmail.com GMAIL_APP_PASSWORD="xxxx xxxx xxxx xxxx" \
+CANCEL_SECRET=<your-cancel-secret> \
+python -m src.remind \
+  --user_email you@example.com \
+  --user_key XY
+
+# Send reminder email (dry run — prints details, no email sent)
 python -m src.remind \
   --user_email you@example.com \
   --user_key XY \
-  --venue koseze \
   --dry_run
 
 # Cancel a booking
