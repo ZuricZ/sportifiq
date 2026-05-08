@@ -53,9 +53,9 @@ users:
   XY:                              # your user key — 2–3 uppercase letters
     notify_emails:
       - you@example.com            # list — add more addresses to CC others
-    venue: koseze                  # primary venue for the remind workflow
+    venue: koseze                  # any valid venue — used as landing page after login
     schedules:
-      - venue: koseze              # must match a key in config/venues.yaml
+      - venue: koseze              # venue to book at (can differ per schedule entry)
         day: monday
         hour: "13:00"
         court: BALON HC1
